@@ -4,7 +4,6 @@ import { Button } from '../../components/Button';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
 import { StepShell } from '../../components/StepShell';
-import { HAS_TMDB } from '../../utils/env';
 
 export function LandingPage() {
   const { userA: savedA, userB: savedB, setUsernames, setStep } = useSession();
@@ -27,7 +26,7 @@ export function LandingPage() {
     }
     setError(null);
     setUsernames(a, b);
-    setStep('analysis');
+    setStep('pair-loading');
   };
 
   return (
@@ -45,8 +44,10 @@ export function LandingPage() {
               <span className="text-accent">45-minute debate</span>.
             </h1>
             <p className="text-ink-300 text-base sm:text-lg leading-relaxed">
-              Matchboxd reads both of your public Letterboxd profiles, finds
-              films you'd both actually watch, and lets you swipe to the answer.
+              Matchboxd looks at both of your public Letterboxd watchlists,
+              finds the films you <em>both</em> already want to see, and hands
+              you a shortlist with posters, ratings, and where to stream it in
+              Turkey.
             </p>
           </div>
 
@@ -83,17 +84,9 @@ export function LandingPage() {
 
             <p className="text-[12px] text-ink-400 leading-relaxed pt-1">
               We only read <strong className="text-ink-200">public</strong>{' '}
-              Letterboxd activity (your RSS feed). Private profiles and
-              unlisted lists are never touched.
-              {!HAS_TMDB && (
-                <>
-                  {' '}
-                  <span className="text-amber-300">
-                    Running in limited mode — set VITE_TMDB_API_KEY in .env for
-                    posters, synopses, and TR streaming availability.
-                  </span>
-                </>
-              )}
+              Letterboxd pages (your watchlist + watched list). Private
+              profiles and unlisted lists are never touched. No API keys
+              required.
             </p>
           </form>
         </div>

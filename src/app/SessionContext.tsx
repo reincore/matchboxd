@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type {
   AnalysisResult,
   FilterSelection,
@@ -7,6 +14,7 @@ import type {
   SessionStep,
   SwipeState,
 } from '../types';
+import type { PairWatchlistResult } from '../services/pairWatchlists';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface SessionState {
@@ -17,6 +25,7 @@ interface SessionState {
   analysis: AnalysisResult | null;
   candidates: MovieCandidate[];
   historicalSessions: SavedSession[];
+  pairResult: PairWatchlistResult | null;
 }
 
 interface SessionContextValue extends SessionState {
@@ -25,6 +34,7 @@ interface SessionContextValue extends SessionState {
   setFilters: (f: FilterSelection) => void;
   setAnalysis: (a: AnalysisResult | null) => void;
   setCandidates: (c: MovieCandidate[]) => void;
+  setPairResult: (r: PairWatchlistResult | null) => void;
   swipe: (candidateId: string, who: 'userA' | 'userB', state: SwipeState) => void;
   resetSwipes: () => void;
   saveSession: (session: SavedSession) => void;
@@ -33,7 +43,7 @@ interface SessionContextValue extends SessionState {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-const STORAGE_KEY = 'matchboxd:session:v1';
+const STORAGE_KEY = 'matchboxd:session:v2';
 const HISTORY_KEY = 'matchboxd:history:v1';
 
 const defaultFilters: FilterSelection = { mood: null, constraints: [] };
@@ -61,8 +71,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
   const [history, setHistory] = useLocalStorage<SavedSession[]>(HISTORY_KEY, []);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [pairResult, setPairResult] = useState<PairWatchlistResult | null>(null);
 
-  // Set state derived from persistence
   const setStep = useCallback(
     (s: SessionStep) => setPersisted((p) => ({ ...p, step: s })),
     [setPersisted],
@@ -111,20 +121,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const reset = useCallback(() => {
+    // Explicitly rebuild state rather than relying on clearPersisted's initial
+    // reference — this guarantees we always land back on the 'landing' step
+    // even if earlier code stored a bad value.
     clearPersisted();
+    setPersisted({ ...defaultPersisted });
     setAnalysis(null);
-  }, [clearPersisted]);
+    setPairResult(null);
+  }, [clearPersisted, setPersisted]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
       ...persisted,
       analysis,
+      pairResult,
       historicalSessions: history,
       setStep,
       setUsernames,
       setFilters,
       setAnalysis,
       setCandidates,
+      setPairResult,
       swipe,
       resetSwipes,
       saveSession,
@@ -133,6 +150,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [
       persisted,
       analysis,
+      pairResult,
       history,
       setStep,
       setUsernames,

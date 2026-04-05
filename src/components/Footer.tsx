@@ -5,8 +5,7 @@ export function Footer() {
         <div>
           <div>Matchboxd · built from your public Letterboxd taste.</div>
           <div className="mt-1 text-ink-500">
-            This product uses the TMDB API but is not endorsed or certified by
-            TMDB.
+            Not affiliated with Letterboxd. Reads public profile pages only.
           </div>
         </div>
         <div className="flex items-center gap-3 text-ink-500">
@@ -20,12 +19,12 @@ export function Footer() {
           </a>
           <span aria-hidden>·</span>
           <a
-            href="https://www.themoviedb.org/"
+            href="https://www.justwatch.com/tr"
             target="_blank"
             rel="noreferrer"
             className="hover:text-ink-200 transition-colors"
           >
-            TMDB
+            JustWatch TR
           </a>
         </div>
       </div>

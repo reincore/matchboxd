@@ -36,7 +36,10 @@ jobs:
       - name: Build
         env:
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
-          VITE_RSS_ADAPTER: ${{ vars.VITE_RSS_ADAPTER || 'rss2json' }}
+          # Use 'custom' adapter + VITE_RSS_BASE_URL pointing at a Cloudflare
+          # Worker for reliable production scraping. Falls back to allorigins
+          # + codetabs when no custom proxy is configured.
+          VITE_RSS_ADAPTER: ${{ vars.VITE_RSS_ADAPTER || 'allorigins' }}
           VITE_RSS_BASE_URL: ${{ vars.VITE_RSS_BASE_URL }}
           VITE_APP_BASE_PATH: /matchboxd/
         run: npm run build

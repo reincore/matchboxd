@@ -1,20 +1,23 @@
 import { AnimatePresence } from 'framer-motion';
 import { SessionProvider, useSession } from './app/SessionContext';
 import { LandingPage } from './features/onboarding/LandingPage';
-import { AnalysisPage } from './features/analysis/AnalysisPage';
-import { FiltersPage } from './features/filters/FiltersPage';
-import { SwipePage } from './features/swipe/SwipePage';
-import { ResultsPage } from './features/results/ResultsPage';
+import { PairLoadingPage } from './features/pair/PairLoadingPage';
+import { PairResultsPage } from './features/pair/PairResultsPage';
 
 function Router() {
   const { step } = useSession();
+
+  // The simplified flow only uses three steps. Any legacy value
+  // (analysis/filters/swipe/results) is treated as "landing" so users
+  // recovering stale localStorage don't get stuck.
+  const safeStep =
+    step === 'pair-loading' || step === 'pair-results' ? step : 'landing';
+
   return (
     <AnimatePresence mode="wait">
-      {step === 'landing' && <LandingPage key="landing" />}
-      {step === 'analysis' && <AnalysisPage key="analysis" />}
-      {step === 'filters' && <FiltersPage key="filters" />}
-      {step === 'swipe' && <SwipePage key="swipe" />}
-      {step === 'results' && <ResultsPage key="results" />}
+      {safeStep === 'landing' && <LandingPage key="landing" />}
+      {safeStep === 'pair-loading' && <PairLoadingPage key="pair-loading" />}
+      {safeStep === 'pair-results' && <PairResultsPage key="pair-results" />}
     </AnimatePresence>
   );
 }

@@ -108,7 +108,9 @@ export type SessionStep =
   | 'analysis'
   | 'filters'
   | 'swipe'
-  | 'results';
+  | 'results'
+  | 'pair-loading'
+  | 'pair-results';
 
 export interface SavedSession {
   id: string;
