@@ -44,12 +44,14 @@ export function PairResultsPage() {
   const [watchedSlugs, setWatchedSlugs] = useState<Set<string> | null>(null);
   const [hideWatched, setHideWatched] = useState(false);
   const [loadingWatched, setLoadingWatched] = useState(false);
+  const [watchedError, setWatchedError] = useState<string | null>(null);
 
   // Use streaming items while enriching; final pairResult items when done.
   const items = pairResult ? pairResult.items : streamingItems;
   const counts = pairResult ? pairResult.counts : pairCounts;
 
   const handleHideWatchedToggle = useCallback(async () => {
+    if (loadingWatched) return;
     if (hideWatched) {
       setHideWatched(false);
       return;
@@ -57,19 +59,21 @@ export function PairResultsPage() {
     // First toggle: scrape watched lists lazily.
     if (!watchedSlugs) {
       setLoadingWatched(true);
+      setWatchedError(null);
       try {
-        const slugs = await scrapeWatchedPair(userA, userB);
+        const slugs = await scrapeWatchedPair(userA, userB, 8);
         setWatchedSlugs(slugs);
         setHideWatched(true);
       } catch {
-        // Silently fail — user can try again.
+        setWatchedError('Couldn’t check watched lists right now.');
       } finally {
         setLoadingWatched(false);
       }
     } else {
+      setWatchedError(null);
       setHideWatched(true);
     }
-  }, [hideWatched, watchedSlugs, userA, userB]);
+  }, [hideWatched, loadingWatched, watchedSlugs, userA, userB]);
 
   const filtered = useMemo(() => {
     const pool = items.filter((item) => {
@@ -163,6 +167,7 @@ export function PairResultsPage() {
               onUnderOneHundredChange={setUnderOneHundred}
               hideWatched={hideWatched}
               loadingWatched={loadingWatched}
+              watchedError={watchedError}
               onHideWatchedToggle={handleHideWatchedToggle}
               sort={sort}
               onSortChange={setSort}
@@ -180,6 +185,7 @@ export function PairResultsPage() {
                 setSourceFilter('all');
                 setUnderOneHundred(false);
                 setHideWatched(false);
+                setWatchedError(null);
               }}
             />
           ) : (
@@ -235,6 +241,7 @@ interface FilterBarProps {
   onUnderOneHundredChange: (v: boolean) => void;
   hideWatched: boolean;
   loadingWatched: boolean;
+  watchedError: string | null;
   onHideWatchedToggle: () => void;
   sort: SortOption;
   onSortChange: (s: SortOption) => void;
@@ -252,6 +259,7 @@ function FilterBar({
   onUnderOneHundredChange,
   hideWatched,
   loadingWatched,
+  watchedError,
   onHideWatchedToggle,
   sort,
   onSortChange,
@@ -346,6 +354,11 @@ function FilterBar({
           </select>
         </div>
       </div>
+      {watchedError && (
+        <div className="mt-2 text-[11px] text-amber-300">
+          {watchedError}
+        </div>
+      )}
     </div>
   );
 }

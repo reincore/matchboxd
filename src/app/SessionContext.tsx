@@ -35,6 +35,7 @@ interface SessionState {
 }
 
 interface SessionContextValue extends SessionState {
+  beginPairingRun: () => number;
   setStep: (s: SessionStep) => void;
   setUsernames: (a: string, b: string) => void;
   setFilters: (f: FilterSelection) => void;
@@ -42,11 +43,11 @@ interface SessionContextValue extends SessionState {
   setCandidates: (c: MovieCandidate[]) => void;
   setPairResult: (r: PairWatchlistResult | null) => void;
   /** Set initial stubs from list-page metadata (titles + posters). */
-  setStreamingStubs: (stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => void;
+  setStreamingStubs: (runId: number, stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => void;
   /** Replace a stub with its enriched version. */
-  updateStreamingItem: (item: PairWatchlistItem) => void;
+  updateStreamingItem: (runId: number, item: PairWatchlistItem) => void;
   /** Mark enrichment as finished and consolidate into pairResult. */
-  finalizeEnrichment: (result: PairWatchlistResult) => void;
+  finalizeEnrichment: (runId: number, result: PairWatchlistResult) => void;
   swipe: (candidateId: string, who: 'userA' | 'userB', state: SwipeState) => void;
   resetSwipes: () => void;
   saveSession: (session: SavedSession) => void;
@@ -87,6 +88,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [streamingItems, setStreamingItems] = useState<PairWatchlistItem[]>([]);
   const [isEnriching, setIsEnriching] = useState(false);
   const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
+  const [pairingRunId, setPairingRunId] = useState(0);
+
+  const beginPairingRun = useCallback(() => {
+    const runId = Date.now();
+    setPairingRunId(runId);
+    setPairResult(null);
+    setStreamingItems([]);
+    setPairCounts(null);
+    setIsEnriching(false);
+    return runId;
+  }, []);
 
   const setStep = useCallback(
     (s: SessionStep) => setPersisted((p) => ({ ...p, step: s })),
@@ -106,16 +118,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const setStreamingStubs = useCallback(
-    (stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => {
+    (runId: number, stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => {
+      if (runId !== pairingRunId) return;
       setStreamingItems(stubs);
       setPairCounts(counts);
       setIsEnriching(true);
     },
-    [],
+    [pairingRunId],
   );
 
   const updateStreamingItem = useCallback(
-    (item: PairWatchlistItem) => {
+    (runId: number, item: PairWatchlistItem) => {
+      if (runId !== pairingRunId) return;
       setStreamingItems((prev) => {
         const idx = prev.findIndex((s) => s.slug === item.slug);
         if (idx === -1) return [...prev, item];
@@ -124,18 +138,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    [],
+    [pairingRunId],
   );
 
   const finalizeEnrichment = useCallback(
-    (result: PairWatchlistResult) => {
+    (runId: number, result: PairWatchlistResult) => {
+      if (runId !== pairingRunId) return;
       setPairResult(result);
       setIsEnriching(false);
       // Keep streamingItems in sync with final result
       setStreamingItems(result.items);
       setPairCounts(result.counts);
     },
-    [],
+    [pairingRunId],
   );
 
   const swipe = useCallback(
@@ -177,6 +192,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStreamingItems([]);
     setIsEnriching(false);
     setPairCounts(null);
+    setPairingRunId(0);
   }, [clearPersisted, setPersisted]);
 
   const value = useMemo<SessionContextValue>(
@@ -188,6 +204,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isEnriching,
       pairCounts,
       historicalSessions: history,
+      beginPairingRun,
       setStep,
       setUsernames,
       setFilters,
@@ -210,6 +227,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isEnriching,
       pairCounts,
       history,
+      beginPairingRun,
       setStep,
       setUsernames,
       setFilters,

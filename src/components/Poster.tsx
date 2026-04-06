@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '../utils/cn';
 
 interface PosterProps {
@@ -10,6 +10,11 @@ interface PosterProps {
 
 export function Poster({ src, title, className, rounded = 'xl' }: PosterProps) {
   const [broken, setBroken] = useState(false);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [src]);
+
   const showImage = src && !broken;
 
   return (

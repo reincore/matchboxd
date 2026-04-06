@@ -14,7 +14,7 @@ import {
 export function PairLoadingPage() {
   const {
     userA, userB, setStep,
-    setStreamingStubs, updateStreamingItem, finalizeEnrichment,
+    beginPairingRun, setStreamingStubs, updateStreamingItem, finalizeEnrichment,
   } = useSession();
   const [progress, setProgress] = useState<PairWatchlistProgress>({
     stage: 'watchlists',
@@ -25,6 +25,7 @@ export function PairLoadingPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const runId = beginPairingRun();
     (async () => {
       try {
         const result = await pairWatchlists(userA, userB, {
@@ -32,18 +33,16 @@ export function PairLoadingPage() {
             if (!cancelled) setProgress(p);
           },
           onStubs: (stubs, counts) => {
-            if (cancelled) return;
             // Stubs are ready — transition to results page immediately.
             // Enrichment continues in the background.
-            setStreamingStubs(stubs, counts);
+            setStreamingStubs(runId, stubs, counts);
             setStep('pair-results');
           },
           onItem: (item) => {
-            if (!cancelled) updateStreamingItem(item);
+            updateStreamingItem(runId, item);
           },
         });
-        if (cancelled) return;
-        finalizeEnrichment(result);
+        finalizeEnrichment(runId, result);
       } catch (err) {
         if (cancelled) return;
         const message =
