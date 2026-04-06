@@ -426,7 +426,7 @@ function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: strin
             rel="noopener noreferrer"
             className="text-[12px] font-medium text-accent-soft hover:text-accent transition-colors inline-flex items-center gap-1 focus-ring rounded"
           >
-            Where to watch (TR)
+            Find on JustWatch (TR)
             <ArrowIcon />
           </a>
         </div>

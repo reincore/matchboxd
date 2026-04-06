@@ -87,6 +87,13 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
+function buildJustWatchSearchUrl(title: string, year?: number) {
+  const query = [`site:justwatch.com/tr/film`, `"${title}"`, year ? String(year) : '']
+    .filter(Boolean)
+    .join(' ');
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
 /** Build a stub PairWatchlistItem from list-page metadata (no detail scrape). */
 function buildStub(slug: string, source: ItemSource): PairWatchlistItem {
   const meta = getListPageMeta(slug);
@@ -98,7 +105,10 @@ function buildStub(slug: string, source: ItemSource): PairWatchlistItem {
     genres: [],
     directors: [],
     letterboxdUrl: `https://letterboxd.com/film/${slug}/`,
-    justwatchUrl: `https://www.justwatch.com/tr/film/${slug}`,
+    justwatchUrl: buildJustWatchSearchUrl(
+      meta?.title ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      meta?.year,
+    ),
     source,
     enriched: false,
   };
@@ -118,7 +128,7 @@ function toItem(details: LetterboxdFilmDetails, source: ItemSource): PairWatchli
     lbRatingCount: details.lbRatingCount,
     tmdbId: details.tmdbId,
     letterboxdUrl: `https://letterboxd.com/film/${details.slug}/`,
-    justwatchUrl: `https://www.justwatch.com/tr/film/${details.slug}`,
+    justwatchUrl: buildJustWatchSearchUrl(details.title, details.year),
     source,
     enriched: true,
   };
