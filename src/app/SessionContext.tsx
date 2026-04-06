@@ -1,5 +1,6 @@
 import {
   createContext,
+  useRef,
   useCallback,
   useContext,
   useMemo,
@@ -88,11 +89,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [streamingItems, setStreamingItems] = useState<PairWatchlistItem[]>([]);
   const [isEnriching, setIsEnriching] = useState(false);
   const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
-  const [pairingRunId, setPairingRunId] = useState(0);
+  const pairingRunIdRef = useRef(0);
 
   const beginPairingRun = useCallback(() => {
     const runId = Date.now();
-    setPairingRunId(runId);
+    pairingRunIdRef.current = runId;
     setPairResult(null);
     setStreamingItems([]);
     setPairCounts(null);
@@ -119,17 +120,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const setStreamingStubs = useCallback(
     (runId: number, stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => {
-      if (runId !== pairingRunId) return;
+      if (runId !== pairingRunIdRef.current) return;
       setStreamingItems(stubs);
       setPairCounts(counts);
       setIsEnriching(true);
     },
-    [pairingRunId],
+    [],
   );
 
   const updateStreamingItem = useCallback(
     (runId: number, item: PairWatchlistItem) => {
-      if (runId !== pairingRunId) return;
+      if (runId !== pairingRunIdRef.current) return;
       setStreamingItems((prev) => {
         const idx = prev.findIndex((s) => s.slug === item.slug);
         if (idx === -1) return [...prev, item];
@@ -138,19 +139,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    [pairingRunId],
+    [],
   );
 
   const finalizeEnrichment = useCallback(
     (runId: number, result: PairWatchlistResult) => {
-      if (runId !== pairingRunId) return;
+      if (runId !== pairingRunIdRef.current) return;
       setPairResult(result);
       setIsEnriching(false);
       // Keep streamingItems in sync with final result
       setStreamingItems(result.items);
       setPairCounts(result.counts);
     },
-    [pairingRunId],
+    [],
   );
 
   const swipe = useCallback(
@@ -192,7 +193,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStreamingItems([]);
     setIsEnriching(false);
     setPairCounts(null);
-    setPairingRunId(0);
+    pairingRunIdRef.current = 0;
   }, [clearPersisted, setPersisted]);
 
   const value = useMemo<SessionContextValue>(
