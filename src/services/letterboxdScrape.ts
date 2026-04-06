@@ -268,19 +268,42 @@ function parseHtml(html: string): Document {
 // Watchlist + watched list scraping
 // -----------------------------------------------------------------------------
 
+// Cache of slug → Letterboxd film ID, populated during watchlist scraping.
+// Used to construct fallback poster URLs when detail scraping fails.
+const FILM_ID_CACHE = new Map<string, string>();
+
+/** Construct a best-guess poster URL from a Letterboxd film ID and slug.
+ *  Works for ~80%+ of films; the Poster component handles 404s gracefully. */
+function guessPosterUrl(filmId: string, slug: string, width = 230): string {
+  const height = Math.round((width * 3) / 2);
+  const path = filmId.split('').join('/');
+  return `https://a.ltrbxd.com/resized/film-poster/${path}/${filmId}-${slug}-0-${width}-0-${height}-crop.jpg`;
+}
+
 /** Extract all film slugs from a watchlist/films-list page. Letterboxd uses
- *  a `data-item-slug` (sometimes `data-film-slug`) attribute on poster cards. */
+ *  a `data-item-slug` (sometimes `data-film-slug`) attribute on poster cards.
+ *  Also extracts `data-film-id` into FILM_ID_CACHE for fallback poster URLs. */
 function extractSlugsFromListPage(doc: Document): string[] {
   const slugs = new Set<string>();
   // Primary selector: modern poster component exposes data-item-slug.
   doc.querySelectorAll('[data-item-slug]').forEach((node) => {
     const s = node.getAttribute('data-item-slug');
-    if (s) slugs.add(s.toLowerCase());
+    if (s) {
+      const slug = s.toLowerCase();
+      slugs.add(slug);
+      const filmId = node.getAttribute('data-film-id');
+      if (filmId) FILM_ID_CACHE.set(slug, filmId);
+    }
   });
   // Legacy selector seen on some pages.
   doc.querySelectorAll('[data-film-slug]').forEach((node) => {
     const s = node.getAttribute('data-film-slug');
-    if (s) slugs.add(s.toLowerCase());
+    if (s) {
+      const slug = s.toLowerCase();
+      slugs.add(slug);
+      const filmId = node.getAttribute('data-film-id');
+      if (filmId) FILM_ID_CACHE.set(slug, filmId);
+    }
   });
   // Also grab data-item-link / data-film-link hrefs.
   doc.querySelectorAll('[data-item-link], [data-film-link]').forEach((node) => {
@@ -459,9 +482,13 @@ export async function scrapeFilm(slug: string): Promise<LetterboxdFilmDetails> {
     return details;
   } catch {
     // Return a minimal stub so we don't lose this film from the overlap list.
+    // If we captured the film ID during watchlist scraping, construct a
+    // best-guess poster URL so we at least show an image.
+    const filmId = FILM_ID_CACHE.get(normalized);
     const stub: LetterboxdFilmDetails = {
       slug: normalized,
       title: normalized.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      posterUrl: filmId ? guessPosterUrl(filmId, normalized, 460) : undefined,
       genres: [],
       directors: [],
     };
