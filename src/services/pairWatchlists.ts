@@ -158,7 +158,7 @@ export async function pairWatchlists(
     onItem,
     onStubs,
     maxWatchlistPages = 25,
-    detailConcurrency = 3,
+    detailConcurrency = 5,
     maxOverlap = 60,
     maxNearMisses = 40,
   } = opts;

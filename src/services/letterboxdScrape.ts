@@ -40,7 +40,16 @@ const DEFAULT_PROXIES: ProxyAdapter[] = [
             `http://localhost:8787/?url=${encodeURIComponent(u)}`,
         },
       ]
-    : []),
+    : [
+        // Production: our own Cloudflare Worker — fast, no shared rate limits,
+        // 5-min edge cache. Free tier = 100K req/day.
+        {
+          name: 'cfworker',
+          build: (u: string) =>
+            `https://matchboxd-proxy.reincore.workers.dev/?url=${encodeURIComponent(u)}`,
+        },
+      ]),
+  // Public fallbacks in case the Worker is down.
   {
     name: 'codetabs',
     build: (u) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
@@ -113,13 +122,20 @@ const delay = (ms: number): Promise<void> =>
  *  per-origin, not per-client, so spreading across proxies is safe. */
 const IS_LOCALHOST =
   typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const MIN_GAP_MS = IS_LOCALHOST ? 100 : 1200;
+/** Per-proxy throttle gaps. Our own proxies (local dev, Cloudflare Worker) can
+ *  handle much tighter spacing than shared public proxies. */
+const FAST_PROXY_GAP_MS = 150;
+const PUBLIC_PROXY_GAP_MS = 1200;
+const FAST_PROXIES = new Set(['local', 'cfworker', 'custom']);
 const PROXY_LAST_REQUEST = new Map<string, number>();
 
 async function acquireSlot(proxyName: string): Promise<void> {
+  const gap = FAST_PROXIES.has(proxyName) || IS_LOCALHOST
+    ? FAST_PROXY_GAP_MS
+    : PUBLIC_PROXY_GAP_MS;
   const now = Date.now();
   const last = PROXY_LAST_REQUEST.get(proxyName) ?? 0;
-  const next = Math.max(now, last + MIN_GAP_MS);
+  const next = Math.max(now, last + gap);
   const wait = next - now;
   PROXY_LAST_REQUEST.set(proxyName, next);
   if (wait > 0) await delay(wait);
