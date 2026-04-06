@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://reincore.github.io/matchboxd/">Live app</a>
+  <a href="https://matchboxd.com/">Live app</a>
   ·
   <a href="https://github.com/reincore/matchboxd">Repository</a>
 </p>
@@ -66,7 +66,7 @@ node worker/local-proxy.mjs
 |---|---|---|
 | `VITE_RSS_ADAPTER` | Proxy mode: `rss2json`, `allorigins`, or `custom` | `allorigins` |
 | `VITE_RSS_BASE_URL` | Base URL for the custom proxy/Worker | *(empty)* |
-| `VITE_APP_BASE_PATH` | Base path for GitHub Pages or custom domains | `/matchboxd/` |
+| `VITE_APP_BASE_PATH` | Base path for the deployed app | `/` |
 
 ## Deploy
 

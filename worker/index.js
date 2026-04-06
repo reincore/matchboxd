@@ -7,7 +7,8 @@
 // Usage from the browser:
 //   fetch('https://<your-worker>.workers.dev/?url=<encoded-letterboxd-url>')
 
-const ALLOWED_ORIGINS = /^https?:\/\/(localhost|127\.0\.0\.1|reincore\.github\.io)/;
+const ALLOWED_ORIGINS =
+  /^https?:\/\/(localhost|127\.0\.0\.1|reincore\.github\.io|matchboxd\.com|www\.matchboxd\.com)/;
 const ALLOWED_TARGET = /^https:\/\/(www\.)?letterboxd\.com\//;
 
 export default {
