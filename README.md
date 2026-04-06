@@ -20,6 +20,8 @@
 
 Matchboxd is a mobile-first web app for couples choosing a movie together from their public Letterboxd watchlists. Enter two usernames, get a shared shortlist, and stop scrolling forever.
 
+Live at [matchboxd.com](https://matchboxd.com).
+
 ## What It Does
 
 - 💘 Finds films that overlap across two watchlists
@@ -70,7 +72,7 @@ node worker/local-proxy.mjs
 
 ## Deploy
 
-The frontend is deployed to GitHub Pages.
+The frontend is deployed to GitHub Pages at [matchboxd.com](https://matchboxd.com).
 
 For the preferred production proxy path, deploy the Cloudflare Worker in `worker/`:
 
