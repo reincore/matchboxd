@@ -14,7 +14,7 @@ import type {
   SessionStep,
   SwipeState,
 } from '../types';
-import type { PairWatchlistResult } from '../services/pairWatchlists';
+import type { PairWatchlistItem, PairWatchlistResult } from '../services/pairWatchlists';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface SessionState {
@@ -26,6 +26,12 @@ interface SessionState {
   candidates: MovieCandidate[];
   historicalSessions: SavedSession[];
   pairResult: PairWatchlistResult | null;
+  /** Items streamed in during enrichment (stubs → enriched progressively). */
+  streamingItems: PairWatchlistItem[];
+  /** True while enrichment is still running. */
+  isEnriching: boolean;
+  /** Counts from the intersection phase, available before enrichment. */
+  pairCounts: PairWatchlistResult['counts'] | null;
 }
 
 interface SessionContextValue extends SessionState {
@@ -35,6 +41,12 @@ interface SessionContextValue extends SessionState {
   setAnalysis: (a: AnalysisResult | null) => void;
   setCandidates: (c: MovieCandidate[]) => void;
   setPairResult: (r: PairWatchlistResult | null) => void;
+  /** Set initial stubs from list-page metadata (titles + posters). */
+  setStreamingStubs: (stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => void;
+  /** Replace a stub with its enriched version. */
+  updateStreamingItem: (item: PairWatchlistItem) => void;
+  /** Mark enrichment as finished and consolidate into pairResult. */
+  finalizeEnrichment: (result: PairWatchlistResult) => void;
   swipe: (candidateId: string, who: 'userA' | 'userB', state: SwipeState) => void;
   resetSwipes: () => void;
   saveSession: (session: SavedSession) => void;
@@ -72,6 +84,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useLocalStorage<SavedSession[]>(HISTORY_KEY, []);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [pairResult, setPairResult] = useState<PairWatchlistResult | null>(null);
+  const [streamingItems, setStreamingItems] = useState<PairWatchlistItem[]>([]);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
 
   const setStep = useCallback(
     (s: SessionStep) => setPersisted((p) => ({ ...p, step: s })),
@@ -89,6 +104,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     (c: MovieCandidate[]) => setPersisted((p) => ({ ...p, candidates: c })),
     [setPersisted],
   );
+
+  const setStreamingStubs = useCallback(
+    (stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => {
+      setStreamingItems(stubs);
+      setPairCounts(counts);
+      setIsEnriching(true);
+    },
+    [],
+  );
+
+  const updateStreamingItem = useCallback(
+    (item: PairWatchlistItem) => {
+      setStreamingItems((prev) => {
+        const idx = prev.findIndex((s) => s.slug === item.slug);
+        if (idx === -1) return [...prev, item];
+        const next = [...prev];
+        next[idx] = item;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const finalizeEnrichment = useCallback(
+    (result: PairWatchlistResult) => {
+      setPairResult(result);
+      setIsEnriching(false);
+      // Keep streamingItems in sync with final result
+      setStreamingItems(result.items);
+      setPairCounts(result.counts);
+    },
+    [],
+  );
+
   const swipe = useCallback(
     (candidateId: string, who: 'userA' | 'userB', state: SwipeState) => {
       setPersisted((p) => ({
@@ -121,13 +170,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const reset = useCallback(() => {
-    // Explicitly rebuild state rather than relying on clearPersisted's initial
-    // reference — this guarantees we always land back on the 'landing' step
-    // even if earlier code stored a bad value.
     clearPersisted();
     setPersisted({ ...defaultPersisted });
     setAnalysis(null);
     setPairResult(null);
+    setStreamingItems([]);
+    setIsEnriching(false);
+    setPairCounts(null);
   }, [clearPersisted, setPersisted]);
 
   const value = useMemo<SessionContextValue>(
@@ -135,6 +184,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ...persisted,
       analysis,
       pairResult,
+      streamingItems,
+      isEnriching,
+      pairCounts,
       historicalSessions: history,
       setStep,
       setUsernames,
@@ -142,6 +194,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setAnalysis,
       setCandidates,
       setPairResult,
+      setStreamingStubs,
+      updateStreamingItem,
+      finalizeEnrichment,
       swipe,
       resetSwipes,
       saveSession,
@@ -151,11 +206,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       persisted,
       analysis,
       pairResult,
+      streamingItems,
+      isEnriching,
+      pairCounts,
       history,
       setStep,
       setUsernames,
       setFilters,
       setCandidates,
+      setStreamingStubs,
+      updateStreamingItem,
+      finalizeEnrichment,
       swipe,
       resetSwipes,
       saveSession,

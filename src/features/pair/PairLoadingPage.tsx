@@ -12,7 +12,10 @@ import {
 } from '../../services/pairWatchlists';
 
 export function PairLoadingPage() {
-  const { userA, userB, setStep, setPairResult } = useSession();
+  const {
+    userA, userB, setStep, setPairResult,
+    setStreamingStubs, updateStreamingItem, finalizeEnrichment,
+  } = useSession();
   const [progress, setProgress] = useState<PairWatchlistProgress>({
     stage: 'watchlists',
     message: 'Getting started…',
@@ -28,10 +31,19 @@ export function PairLoadingPage() {
           onProgress: (p) => {
             if (!cancelled) setProgress(p);
           },
+          onStubs: (stubs, counts) => {
+            if (cancelled) return;
+            // Stubs are ready — transition to results page immediately.
+            // Enrichment continues in the background.
+            setStreamingStubs(stubs, counts);
+            setStep('pair-results');
+          },
+          onItem: (item) => {
+            if (!cancelled) updateStreamingItem(item);
+          },
         });
         if (cancelled) return;
-        setPairResult(result);
-        setStep('pair-results');
+        finalizeEnrichment(result);
       } catch (err) {
         if (cancelled) return;
         const message =
@@ -114,8 +126,6 @@ function stageLabel(stage: PairWatchlistProgress['stage']): string {
   switch (stage) {
     case 'watchlists':
       return 'reading watchlists';
-    case 'watched':
-      return 'filtering watched';
     case 'intersection':
       return 'finding overlap';
     case 'details':
@@ -128,11 +138,9 @@ function stageLabel(stage: PairWatchlistProgress['stage']): string {
 function stageToPercent(stage: PairWatchlistProgress['stage']): number {
   switch (stage) {
     case 'watchlists':
-      return 25;
+      return 30;
     case 'intersection':
-      return 45;
-    case 'watched':
-      return 55;
+      return 50;
     case 'details':
       return 75;
     case 'done':
@@ -173,7 +181,7 @@ function ErrorView({
   return (
     <div className="surface-card p-5">
       <div className="text-sm text-red-400 mb-1 font-medium">
-        We couldn't finish matching.
+        We couldn&apos;t finish matching.
       </div>
       <div className="text-sm text-ink-300 mb-4">{message}</div>
       <div className="flex gap-2">

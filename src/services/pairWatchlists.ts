@@ -2,15 +2,15 @@
 //
 // Given two Letterboxd usernames, we:
 //   1. Scrape each user's public watchlist (every page).
-//   2. Scrape each user's "watched" list so we can drop anything either
-//      person has already seen.
-//   3. Intersect the two remaining sets.
-//   4. For each shared slug, scrape the film detail page to pull poster,
-//      rating, runtime, genres, directors, etc.
+//   2. Intersect → build stubs from list-page metadata → emit them immediately.
+//   3. Enrich each film with detail page data (poster, rating, runtime, etc.)
+//      and stream updates to the caller via onItem callback.
+//   4. Watched-list scraping is deferred — the caller can trigger it lazily.
 //
 // The whole thing is done client-side via a CORS proxy. No TMDB key needed.
 
 import {
+  getListPageMeta,
   scrapeFilm,
   scrapeWatched,
   scrapeWatchlist,
@@ -35,10 +35,12 @@ export interface PairWatchlistItem {
   letterboxdUrl: string;
   justwatchUrl: string;
   source: ItemSource;
+  /** True if this item has been enriched with detail page data. */
+  enriched: boolean;
 }
 
 export interface PairWatchlistProgress {
-  stage: 'watchlists' | 'watched' | 'intersection' | 'details' | 'done';
+  stage: 'watchlists' | 'intersection' | 'details' | 'done';
   message: string;
   detailsLoaded?: number;
   detailsTotal?: number;
@@ -52,8 +54,8 @@ export interface PairWatchlistResult {
     watchlistA: number;
     watchlistB: number;
     overlap: number;
-    filtered: number; // overlap minus watched
-    enriched: number; // successfully scraped
+    filtered: number; // overlap (no watched filter applied upfront anymore)
+    enriched: number; // successfully scraped detail pages
   };
   userA: string;
   userB: string;
@@ -87,6 +89,23 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
+/** Build a stub PairWatchlistItem from list-page metadata (no detail scrape). */
+function buildStub(slug: string, source: ItemSource): PairWatchlistItem {
+  const meta = getListPageMeta(slug);
+  return {
+    slug,
+    title: meta?.title ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    year: meta?.year,
+    posterUrl: meta?.posterUrl,
+    genres: [],
+    directors: [],
+    letterboxdUrl: `https://letterboxd.com/film/${slug}/`,
+    justwatchUrl: `https://www.justwatch.com/tr/film/${slug}`,
+    source,
+    enriched: false,
+  };
+}
+
 function toItem(details: LetterboxdFilmDetails, source: ItemSource): PairWatchlistItem {
   return {
     slug: details.slug,
@@ -103,17 +122,21 @@ function toItem(details: LetterboxdFilmDetails, source: ItemSource): PairWatchli
     letterboxdUrl: `https://letterboxd.com/film/${details.slug}/`,
     justwatchUrl: `https://www.justwatch.com/tr/film/${details.slug}`,
     source,
+    enriched: true,
   };
 }
 
 export interface PairWatchlistsOptions {
   /** Called as we move through stages; enables a live progress UI. */
   onProgress?: (p: PairWatchlistProgress) => void;
+  /** Called with each enriched item as soon as it's ready — enables streaming UI. */
+  onItem?: (item: PairWatchlistItem) => void;
+  /** Called with all stubs immediately after intersection, before enrichment. */
+  onStubs?: (stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => void;
   /** Cap on watchlist pages per user (each page = 28 films). */
   maxWatchlistPages?: number;
-  /** Cap on watched-list pages per user. Higher = more accurate filter. */
-  maxWatchedPages?: number;
-  /** Parallel requests when enriching film details. */
+  /** Parallel requests when enriching film details. With per-proxy throttle
+   *  this maps to parallel proxy usage. */
   detailConcurrency?: number;
   /** Optional cap on total films sent to enrichment. */
   maxOverlap?: number;
@@ -121,7 +144,10 @@ export interface PairWatchlistsOptions {
   maxNearMisses?: number;
 }
 
-/** Build the list of films both users want to see and have not seen yet. */
+/** Build the list of films both users want to see.
+ *
+ *  Watched-list filtering is no longer done here — use `scrapeWatchedPair`
+ *  from the results page as a lazy opt-in filter. */
 export async function pairWatchlists(
   userA: string,
   userB: string,
@@ -129,9 +155,10 @@ export async function pairWatchlists(
 ): Promise<PairWatchlistResult> {
   const {
     onProgress,
+    onItem,
+    onStubs,
     maxWatchlistPages = 25,
-    maxWatchedPages = 25,
-    detailConcurrency = 2,
+    detailConcurrency = 3,
     maxOverlap = 60,
     maxNearMisses = 40,
   } = opts;
@@ -147,9 +174,8 @@ export async function pairWatchlists(
     );
   }
 
-  // 1. Watchlists. We do these in parallel at the API level — the global
-  // request throttle will serialize them on the wire, but starting both
-  // "simultaneously" means neither user blocks the other.
+  // 1. Scrape both watchlists in parallel. With per-proxy throttle, requests
+  //    to different proxies actually run concurrently.
   onProgress?.({
     stage: 'watchlists',
     message: `Fetching @${cleanA} and @${cleanB}'s watchlists…`,
@@ -201,91 +227,56 @@ export async function pairWatchlists(
     );
   }
 
+  // 2. Intersection + near-misses (instant — no network needed).
   const setA = new Set(listA);
   const setB = new Set(listB);
   const overlap = listA.filter((slug) => setB.has(slug));
 
-  // Near-misses: films on only one person's watchlist.
-  // Take from the front of each list (most recently added = highest intent).
   const onlyA = listA.filter((slug) => !setB.has(slug));
   const onlyB = listB.filter((slug) => !setA.has(slug));
 
-  onProgress?.({
-    stage: 'intersection',
-    message: `Found ${overlap.length} shared film${overlap.length === 1 ? '' : 's'} — checking what you've already watched…`,
-  });
-
-  // 2. Watched filter. Best-effort — if either user's watched list can't be
-  // read we proceed with an unfiltered overlap.
-  onProgress?.({
-    stage: 'watched',
-    message: 'Filtering out films either of you has already seen…',
-  });
-  const watchedProgress = { a: 0, b: 0, aT: 0, bT: 0 };
-  const emitWatchedProgress = () => {
-    const done = watchedProgress.a + watchedProgress.b;
-    const total = watchedProgress.aT + watchedProgress.bT;
-    onProgress?.({
-      stage: 'watched',
-      message: total
-        ? `Checking watched lists… page ${done}/${total}`
-        : `Checking watched lists… ${done} pages so far`,
-      pageLoaded: done,
-      pageTotal: total,
-    });
-  };
-  const [watchedA, watchedB] = await Promise.all([
-    scrapeWatched(cleanA, maxWatchedPages, (p) => {
-      watchedProgress.a = p.page;
-      watchedProgress.aT = p.total;
-      emitWatchedProgress();
-    }),
-    scrapeWatched(cleanB, maxWatchedPages, (p) => {
-      watchedProgress.b = p.page;
-      watchedProgress.bT = p.total;
-      emitWatchedProgress();
-    }),
-  ]);
-  const seen = new Set<string>([...watchedA, ...watchedB]);
-  const filtered = overlap.filter((slug) => !seen.has(slug));
-
-  // Near-misses: filter out watched, interleave from both lists evenly.
-  const nearA = onlyA.filter((slug) => !seen.has(slug));
-  const nearB = onlyB.filter((slug) => !seen.has(slug));
+  // Interleave near-misses from both lists evenly.
   const nearMisses: { slug: string; source: ItemSource }[] = [];
   const halfCap = Math.ceil(maxNearMisses / 2);
-  const cappedA = nearA.slice(0, halfCap);
-  const cappedB = nearB.slice(0, halfCap);
+  const cappedA = onlyA.slice(0, halfCap);
+  const cappedB = onlyB.slice(0, halfCap);
   for (let i = 0; i < Math.max(cappedA.length, cappedB.length); i++) {
     if (i < cappedA.length) nearMisses.push({ slug: cappedA[i], source: 'userA' });
     if (i < cappedB.length) nearMisses.push({ slug: cappedB[i], source: 'userB' });
     if (nearMisses.length >= maxNearMisses) break;
   }
 
-  // Keep a tight cap so enrichment stays fast.
-  const overlapToEnrich = filtered.slice(0, maxOverlap);
+  const overlapToEnrich = overlap.slice(0, maxOverlap);
   const allToEnrich = [
     ...overlapToEnrich.map((slug) => ({ slug, source: 'both' as ItemSource })),
     ...nearMisses,
   ];
 
+  const counts: PairWatchlistResult['counts'] = {
+    watchlistA: listA.length,
+    watchlistB: listB.length,
+    overlap: overlap.length,
+    filtered: overlapToEnrich.length + nearMisses.length,
+    enriched: 0,
+  };
+
+  // Build stubs from list-page metadata and emit immediately.
+  // This lets the UI show a full grid of films with posters + titles
+  // before any detail pages have loaded.
+  const stubs = allToEnrich.map(({ slug, source }) => buildStub(slug, source));
+  onStubs?.(stubs, counts);
+
+  onProgress?.({
+    stage: 'intersection',
+    message: `Found ${overlap.length} shared film${overlap.length === 1 ? '' : 's'} — loading details…`,
+  });
+
   if (allToEnrich.length === 0) {
     onProgress?.({ stage: 'done', message: 'Done!' });
-    return {
-      items: [],
-      userA: cleanA,
-      userB: cleanB,
-      counts: {
-        watchlistA: listA.length,
-        watchlistB: listB.length,
-        overlap: overlap.length,
-        filtered: filtered.length,
-        enriched: 0,
-      },
-    };
+    return { items: [], userA: cleanA, userB: cleanB, counts };
   }
 
-  // 3. Enrich each film with poster + rating + runtime.
+  // 3. Enrich each film with detail page data, streaming items to the caller.
   const total = allToEnrich.length;
   let loaded = 0;
   onProgress?.({
@@ -299,13 +290,15 @@ export async function pairWatchlists(
     try {
       const d = await scrapeFilm(slug);
       loaded += 1;
+      const item = toItem(d, source);
+      onItem?.(item);
       onProgress?.({
         stage: 'details',
         message: `Loading films… ${loaded}/${total}`,
         detailsLoaded: loaded,
         detailsTotal: total,
       });
-      return { details: d, source };
+      return item;
     } catch {
       loaded += 1;
       onProgress?.({
@@ -318,22 +311,28 @@ export async function pairWatchlists(
     }
   });
 
-  const items = details
-    .filter((d): d is { details: LetterboxdFilmDetails; source: ItemSource } => d !== null)
-    .map((d) => toItem(d.details, d.source));
+  const items = details.filter((d): d is PairWatchlistItem => d !== null);
+  counts.enriched = items.length;
 
   onProgress?.({ stage: 'done', message: 'Done!' });
 
-  return {
-    items,
-    userA: cleanA,
-    userB: cleanB,
-    counts: {
-      watchlistA: listA.length,
-      watchlistB: listB.length,
-      overlap: overlap.length,
-      filtered: filtered.length,
-      enriched: items.length,
-    },
-  };
+  return { items, userA: cleanA, userB: cleanB, counts };
+}
+
+/** Scrape watched lists for both users. Call lazily from the results page
+ *  when the user toggles "hide watched". Returns a Set of watched slugs. */
+export async function scrapeWatchedPair(
+  userA: string,
+  userB: string,
+  maxPages = 25,
+  onProgress?: (msg: string) => void,
+): Promise<Set<string>> {
+  const cleanA = userA.trim().replace(/^@/, '').toLowerCase();
+  const cleanB = userB.trim().replace(/^@/, '').toLowerCase();
+  onProgress?.('Checking watched lists…');
+  const [watchedA, watchedB] = await Promise.all([
+    scrapeWatched(cleanA, maxPages),
+    scrapeWatched(cleanB, maxPages),
+  ]);
+  return new Set([...watchedA, ...watchedB]);
 }
