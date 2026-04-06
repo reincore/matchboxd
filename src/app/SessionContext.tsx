@@ -1,5 +1,6 @@
 import {
   createContext,
+  useEffect,
   useRef,
   useCallback,
   useContext,
@@ -90,6 +91,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isEnriching, setIsEnriching] = useState(false);
   const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
   const pairingRunIdRef = useRef(0);
+
+  useEffect(() => {
+    // Pair loading/results depend on in-memory data that is not restored after
+    // a hard refresh, so reopen the app on the landing step instead.
+    if (persisted.step === 'pair-loading' || persisted.step === 'pair-results') {
+      setPersisted((p) => ({ ...p, step: 'landing' }));
+    }
+  }, [persisted.step, setPersisted]);
 
   const beginPairingRun = useCallback(() => {
     const runId = Date.now();
