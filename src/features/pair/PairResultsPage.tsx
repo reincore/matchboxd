@@ -37,6 +37,7 @@ export function PairResultsPage() {
   const [mood, setMood] = useState<MoodFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [underOneHundred, setUnderOneHundred] = useState(false);
+  const [highRatedOnly, setHighRatedOnly] = useState(false);
   const [sort, setSort] = useState<SortOption>('rating');
 
   // Use streaming items while enriching; final pairResult items when done.
@@ -46,6 +47,7 @@ export function PairResultsPage() {
   const filtered = useMemo(() => {
     const pool = items.filter((item) => {
       if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
+      if (highRatedOnly && (item.lbRating ?? 0) < 4) return false;
       if (sourceFilter === 'both' && item.source !== 'both') return false;
       if (sourceFilter === 'userA' && item.source !== 'userA') return false;
       if (sourceFilter === 'userB' && item.source !== 'userB') return false;
@@ -63,7 +65,7 @@ export function PairResultsPage() {
       return true;
     });
     return sortItems(pool, sort);
-  }, [items, mood, sourceFilter, underOneHundred, sort]);
+  }, [items, mood, sourceFilter, underOneHundred, highRatedOnly, sort]);
 
   if (!counts && items.length === 0) {
     return (
@@ -127,6 +129,8 @@ export function PairResultsPage() {
               onSourceFilterChange={setSourceFilter}
               underOneHundred={underOneHundred}
               onUnderOneHundredChange={setUnderOneHundred}
+              highRatedOnly={highRatedOnly}
+              onHighRatedOnlyChange={setHighRatedOnly}
               sort={sort}
               onSortChange={setSort}
               count={totalShown}
@@ -142,6 +146,7 @@ export function PairResultsPage() {
                 setMood('all');
                 setSourceFilter('all');
                 setUnderOneHundred(false);
+                setHighRatedOnly(false);
               }}
             />
           ) : (
@@ -195,6 +200,8 @@ interface FilterBarProps {
   onSourceFilterChange: (s: SourceFilter) => void;
   underOneHundred: boolean;
   onUnderOneHundredChange: (v: boolean) => void;
+  highRatedOnly: boolean;
+  onHighRatedOnlyChange: (v: boolean) => void;
   sort: SortOption;
   onSortChange: (s: SortOption) => void;
   count: number;
@@ -209,6 +216,8 @@ function FilterBar({
   onSourceFilterChange,
   underOneHundred,
   onUnderOneHundredChange,
+  highRatedOnly,
+  onHighRatedOnlyChange,
   sort,
   onSortChange,
   count,
@@ -224,38 +233,62 @@ function FilterBar({
 
   return (
     <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-ink-950/85 backdrop-blur-md border-b border-ink-800">
-      <div className="flex flex-wrap items-center gap-2">
-        {MOODS.map((m) => (
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-ink-500">
+            Mood
+          </span>
+          {MOODS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onMoodChange(m.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
+                mood === m.id
+                  ? 'bg-accent/15 border-accent/60 text-accent-soft'
+                  : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
+              )}
+            >
+              <span aria-hidden>{m.emoji}</span>
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-1 sm:border-l sm:border-ink-800">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-ink-500">
+            Quick filter
+          </span>
           <button
-            key={m.id}
             type="button"
-            onClick={() => onMoodChange(m.id)}
+            onClick={() => onUnderOneHundredChange(!underOneHundred)}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
-              mood === m.id
-                ? 'bg-accent/15 border-accent/60 text-accent-soft'
+              underOneHundred
+                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300'
                 : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
             )}
+            aria-pressed={underOneHundred}
           >
-            <span aria-hidden>{m.emoji}</span>
-            {m.label}
+            <span aria-hidden>⏱</span>
+            Under 100 min
           </button>
-        ))}
-
-        <button
-          type="button"
-          onClick={() => onUnderOneHundredChange(!underOneHundred)}
-          className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
-            underOneHundred
-              ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300'
-              : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
-          )}
-          aria-pressed={underOneHundred}
-        >
-          <span aria-hidden>⏱</span>
-          Under 100 min
-        </button>
+          <button
+            type="button"
+            onClick={() => onHighRatedOnlyChange(!highRatedOnly)}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
+              highRatedOnly
+                ? 'bg-amber-500/10 border-amber-400/50 text-amber-200'
+                : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
+            )}
+            aria-pressed={highRatedOnly}
+          >
+            <span aria-hidden>★</span>
+            4.0+ LB
+          </button>
+        </div>
 
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-wider text-ink-500">
