@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState } from 'react';
 import { useSession } from '../../app/SessionContext';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
@@ -6,7 +6,6 @@ import { Poster } from '../../components/Poster';
 import { StepShell } from '../../components/StepShell';
 import { Button } from '../../components/Button';
 import type { PairWatchlistItem, ItemSource } from '../../services/pairWatchlists';
-import { scrapeWatchedPair } from '../../services/pairWatchlists';
 import { cn } from '../../utils/cn';
 
 type MoodFilter = 'all' | 'horror' | 'romcom' | 'recent';
@@ -40,44 +39,12 @@ export function PairResultsPage() {
   const [underOneHundred, setUnderOneHundred] = useState(false);
   const [sort, setSort] = useState<SortOption>('rating');
 
-  // "Hide watched" state — loaded lazily on first toggle.
-  const [watchedSlugs, setWatchedSlugs] = useState<Set<string> | null>(null);
-  const [hideWatched, setHideWatched] = useState(false);
-  const [loadingWatched, setLoadingWatched] = useState(false);
-  const [watchedError, setWatchedError] = useState<string | null>(null);
-
   // Use streaming items while enriching; final pairResult items when done.
   const items = pairResult ? pairResult.items : streamingItems;
   const counts = pairResult ? pairResult.counts : pairCounts;
 
-  const handleHideWatchedToggle = useCallback(async () => {
-    if (loadingWatched) return;
-    if (hideWatched) {
-      setHideWatched(false);
-      return;
-    }
-    // First toggle: scrape watched lists lazily.
-    if (!watchedSlugs) {
-      setLoadingWatched(true);
-      setWatchedError(null);
-      try {
-        const slugs = await scrapeWatchedPair(userA, userB, 8);
-        setWatchedSlugs(slugs);
-        setHideWatched(true);
-      } catch {
-        setWatchedError('Couldn’t check watched lists right now.');
-      } finally {
-        setLoadingWatched(false);
-      }
-    } else {
-      setWatchedError(null);
-      setHideWatched(true);
-    }
-  }, [hideWatched, loadingWatched, watchedSlugs, userA, userB]);
-
   const filtered = useMemo(() => {
     const pool = items.filter((item) => {
-      if (hideWatched && watchedSlugs?.has(item.slug)) return false;
       if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
       if (sourceFilter === 'both' && item.source !== 'both') return false;
       if (sourceFilter === 'userA' && item.source !== 'userA') return false;
@@ -96,7 +63,7 @@ export function PairResultsPage() {
       return true;
     });
     return sortItems(pool, sort);
-  }, [items, mood, sourceFilter, underOneHundred, hideWatched, watchedSlugs, sort]);
+  }, [items, mood, sourceFilter, underOneHundred, sort]);
 
   if (!counts && items.length === 0) {
     return (
@@ -165,10 +132,6 @@ export function PairResultsPage() {
               onSourceFilterChange={setSourceFilter}
               underOneHundred={underOneHundred}
               onUnderOneHundredChange={setUnderOneHundred}
-              hideWatched={hideWatched}
-              loadingWatched={loadingWatched}
-              watchedError={watchedError}
-              onHideWatchedToggle={handleHideWatchedToggle}
               sort={sort}
               onSortChange={setSort}
               count={totalShown}
@@ -184,8 +147,6 @@ export function PairResultsPage() {
                 setMood('all');
                 setSourceFilter('all');
                 setUnderOneHundred(false);
-                setHideWatched(false);
-                setWatchedError(null);
               }}
             />
           ) : (
@@ -239,10 +200,6 @@ interface FilterBarProps {
   onSourceFilterChange: (s: SourceFilter) => void;
   underOneHundred: boolean;
   onUnderOneHundredChange: (v: boolean) => void;
-  hideWatched: boolean;
-  loadingWatched: boolean;
-  watchedError: string | null;
-  onHideWatchedToggle: () => void;
   sort: SortOption;
   onSortChange: (s: SortOption) => void;
   count: number;
@@ -257,10 +214,6 @@ function FilterBar({
   onSourceFilterChange,
   underOneHundred,
   onUnderOneHundredChange,
-  hideWatched,
-  loadingWatched,
-  watchedError,
-  onHideWatchedToggle,
   sort,
   onSortChange,
   count,
@@ -309,23 +262,6 @@ function FilterBar({
           Under 100 min
         </button>
 
-        <button
-          type="button"
-          onClick={onHideWatchedToggle}
-          disabled={loadingWatched}
-          className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
-            hideWatched
-              ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300'
-              : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
-            loadingWatched && 'opacity-60',
-          )}
-          aria-pressed={hideWatched}
-        >
-          {loadingWatched ? <MiniSpinner /> : <span aria-hidden>👁</span>}
-          Hide watched
-        </button>
-
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-wider text-ink-500">
             {count} shown
@@ -354,11 +290,6 @@ function FilterBar({
           </select>
         </div>
       </div>
-      {watchedError && (
-        <div className="mt-2 text-[11px] text-amber-300">
-          {watchedError}
-        </div>
-      )}
     </div>
   );
 }

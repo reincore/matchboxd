@@ -5,14 +5,12 @@
 //   2. Intersect → build stubs from list-page metadata → emit them immediately.
 //   3. Enrich each film with detail page data (poster, rating, runtime, etc.)
 //      and stream updates to the caller via onItem callback.
-//   4. Watched-list scraping is deferred — the caller can trigger it lazily.
 //
 // The whole thing is done client-side via a CORS proxy. No TMDB key needed.
 
 import {
   getListPageMeta,
   scrapeFilm,
-  scrapeWatched,
   scrapeWatchlist,
   upscalePoster,
   type LetterboxdFilmDetails,
@@ -54,7 +52,7 @@ export interface PairWatchlistResult {
     watchlistA: number;
     watchlistB: number;
     overlap: number;
-    filtered: number; // overlap (no watched filter applied upfront anymore)
+    filtered: number;
     enriched: number; // successfully scraped detail pages
   };
   userA: string;
@@ -144,10 +142,7 @@ export interface PairWatchlistsOptions {
   maxNearMisses?: number;
 }
 
-/** Build the list of films both users want to see.
- *
- *  Watched-list filtering is no longer done here — use `scrapeWatchedPair`
- *  from the results page as a lazy opt-in filter. */
+/** Build the list of films both users want to see. */
 export async function pairWatchlists(
   userA: string,
   userB: string,
@@ -317,22 +312,4 @@ export async function pairWatchlists(
   onProgress?.({ stage: 'done', message: 'Done!' });
 
   return { items, userA: cleanA, userB: cleanB, counts };
-}
-
-/** Scrape watched lists for both users. Call lazily from the results page
- *  when the user toggles "hide watched". Returns a Set of watched slugs. */
-export async function scrapeWatchedPair(
-  userA: string,
-  userB: string,
-  maxPages = 25,
-  onProgress?: (msg: string) => void,
-): Promise<Set<string>> {
-  const cleanA = userA.trim().replace(/^@/, '').toLowerCase();
-  const cleanB = userB.trim().replace(/^@/, '').toLowerCase();
-  onProgress?.('Checking watched lists…');
-  const [watchedA, watchedB] = await Promise.all([
-    scrapeWatched(cleanA, maxPages),
-    scrapeWatched(cleanB, maxPages),
-  ]);
-  return new Set([...watchedA, ...watchedB]);
 }
