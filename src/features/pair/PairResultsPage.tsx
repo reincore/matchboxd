@@ -8,7 +8,16 @@ import { Button } from '../../components/Button';
 import type { PairWatchlistItem, ItemSource } from '../../services/pairWatchlists';
 import { cn } from '../../utils/cn';
 
-type MoodFilter = 'all' | 'horror' | 'romcom' | 'recent';
+type MoodFilter =
+  | 'all'
+  | 'horror'
+  | 'romcom'
+  | 'drama'
+  | 'comedy'
+  | 'thriller'
+  | 'scifi'
+  | 'animation'
+  | 'recent';
 type SourceFilter = 'all' | 'both' | 'userA' | 'userB';
 type SortOption = 'rating' | 'year-desc' | 'runtime-asc' | 'title';
 
@@ -16,7 +25,12 @@ const MOODS: { id: MoodFilter; label: string; emoji: string }[] = [
   { id: 'all', label: 'Everything', emoji: '✨' },
   { id: 'horror', label: 'Horror', emoji: '🩸' },
   { id: 'romcom', label: 'Rom-Com', emoji: '💌' },
-  { id: 'recent', label: 'Recent', emoji: '🆕' },
+  { id: 'drama', label: 'Drama', emoji: '🎭' },
+  { id: 'comedy', label: 'Comedy', emoji: '😄' },
+  { id: 'thriller', label: 'Thriller', emoji: '🔪' },
+  { id: 'scifi', label: 'Sci-Fi', emoji: '🚀' },
+  { id: 'animation', label: 'Animation', emoji: '🎨' },
+  { id: 'recent', label: 'Recent', emoji: '🗓️' },
 ];
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
@@ -28,6 +42,10 @@ const SORT_OPTIONS: { id: SortOption; label: string }[] = [
 
 const CURRENT_YEAR = new Date().getFullYear();
 const RECENT_THRESHOLD = CURRENT_YEAR - 5;
+
+function hasGenre(item: PairWatchlistItem, pattern: RegExp) {
+  return item.genres.some((g) => pattern.test(g));
+}
 
 export function PairResultsPage() {
   const {
@@ -51,18 +69,26 @@ export function PairResultsPage() {
       if (sourceFilter === 'both' && item.source !== 'both') return false;
       if (sourceFilter === 'userA' && item.source !== 'userA') return false;
       if (sourceFilter === 'userB' && item.source !== 'userB') return false;
-      if (mood === 'horror') {
-        return item.genres.some((g) => /horror/i.test(g));
+      switch (mood) {
+        case 'horror':
+          return hasGenre(item, /horror/i);
+        case 'romcom':
+          return hasGenre(item, /romance/i) || hasGenre(item, /comedy/i);
+        case 'drama':
+          return hasGenre(item, /drama/i);
+        case 'comedy':
+          return hasGenre(item, /comedy/i);
+        case 'thriller':
+          return hasGenre(item, /thriller/i);
+        case 'scifi':
+          return hasGenre(item, /science fiction|sci-?fi/i);
+        case 'animation':
+          return hasGenre(item, /animation/i);
+        case 'recent':
+          return (item.year ?? 0) >= RECENT_THRESHOLD;
+        default:
+          return true;
       }
-      if (mood === 'romcom') {
-        const hasRomance = item.genres.some((g) => /romance/i.test(g));
-        const hasComedy = item.genres.some((g) => /comedy/i.test(g));
-        return hasRomance || hasComedy;
-      }
-      if (mood === 'recent') {
-        return (item.year ?? 0) >= RECENT_THRESHOLD;
-      }
-      return true;
     });
     return sortItems(pool, sort);
   }, [items, mood, sourceFilter, underOneHundred, highRatedOnly, sort]);
