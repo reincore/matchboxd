@@ -44,10 +44,7 @@ export function LandingPage() {
               <span className="text-accent">45-minute debate</span>.
             </h1>
             <p className="text-ink-300 text-base sm:text-lg leading-relaxed">
-              Matchboxd looks at both of your public Letterboxd watchlists,
-              finds the films you <em>both</em> already want to see, and hands
-              you a shortlist with posters, ratings, and where to stream it in
-              Turkey.
+              Movies you both want to watch, with ratings and where to stream.
             </p>
           </div>
 
@@ -81,13 +78,6 @@ export function LandingPage() {
             <Button type="submit" size="lg" fullWidth disabled={!canSubmit}>
               Start matching
             </Button>
-
-            <p className="text-[12px] text-ink-400 leading-relaxed pt-1">
-              We only read <strong className="text-ink-200">public</strong>{' '}
-              Letterboxd pages (your watchlist + watched list). Private
-              profiles and unlisted lists are never touched. No API keys
-              required.
-            </p>
           </form>
         </div>
       </main>
