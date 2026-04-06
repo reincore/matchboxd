@@ -1,234 +1,248 @@
 # Matchboxd
 
-> Find tonight's movie without the 45-minute debate. Built from your public Letterboxd taste.
+<p align="center">
+  <img src="./public/logo.svg" alt="Matchboxd logo" width="320" />
+</p>
 
-Matchboxd is a mobile-first, client-side React web app for couples choosing a
-movie together. Both people enter their Letterboxd usernames, the app reads
-their public RSS activity, builds taste profiles, applies a mood/constraint
-filter, generates ~15 candidate films, then lets each person independently
-swipe yes/no. The app reveals mutual matches and picks the winner.
+<p align="center">
+  Find tonight's movie without the 45-minute debate.
+</p>
 
-- Dark, cinematic, poster-forward UI
-- Mobile swipe + desktop button fallback
-- Deterministic vs inferred recommendation categories
-- Confidence-aware scoring and sparse-data fallback
-- TR (Turkey) watch providers via TMDB
-- 100% client-side static app — deploys to GitHub Pages
+<p align="center">
+  <a href="https://reincore.github.io/matchboxd/">Live app</a>
+  ·
+  <a href="https://github.com/reincore/matchboxd">Repository</a>
+</p>
 
-## What Matchboxd reads
+Matchboxd is a mobile-first React app for couples choosing a movie together
+from their public Letterboxd watchlists. Enter two usernames, fetch the shared
+overlap, sprinkle in near-miss picks from each person's list, then sort and
+filter a poster-forward shortlist.
 
-Matchboxd only reads **public** Letterboxd data through the per-user RSS feed
-at `https://letterboxd.com/<user>/rss/`. That feed exposes recent watched,
-rated, liked, and reviewed activity, and a separate watchlist RSS exposes
-public watchlist items.
+The app currently ships as a static Vite site on GitHub Pages, with a
+Cloudflare Worker used as the preferred production CORS proxy for Letterboxd
+HTML pages.
 
-Because Letterboxd does not send CORS headers, browsers cannot fetch the RSS
-feed directly. Matchboxd proxies through a configurable adapter
-(`rss2json`, `allorigins`, or a custom proxy you host).
+## Current product
 
-### Limitations of public data
+- Username-only flow: no account, no backend database, no setup for users
+- Shared-watchlist matcher with near-miss picks from each person's list
+- Progressive results: stubs render early, metadata enriches in place
+- Lazy watched filter: "Hide watched" fetches watched lists only when needed
+- Mobile-first UI with sticky filter bar and poster grid
+- JustWatch Turkey outbound links for each title
+- Pink-on-ink visual identity with custom Matchboxd logo and icons
 
-- Only items the user has chosen to make public are visible.
-- Private profiles, unlisted lists, and DM-level activity are never touched.
-- The feed is capped (usually last ~50 entries), so very active users have
-  their "recent" window read, not their full history.
-- If a user has limited activity, Matchboxd switches to **sparse-data mode**:
-  fewer strong claims, broader consensus picks, and more weight on the mood
-  filter.
+## How it works
+
+1. Two users enter their Letterboxd usernames.
+2. Matchboxd reads both public watchlists through a proxy.
+3. It computes:
+   - strict overlap: films on both watchlists
+   - near-misses: films from only one watchlist, capped and source-tagged
+4. It emits lightweight film stubs immediately so results can render fast.
+5. It enriches those films progressively with detail-page metadata:
+   - poster
+   - Letterboxd rating
+   - runtime
+   - genres
+   - directors
+6. If the user toggles `Hide watched`, the app lazily fetches both watched
+   lists and filters them out.
+
+## Stack
+
+- React 18
+- TypeScript 5
+- Vite 5
+- Tailwind CSS 3
+- Framer Motion 11
+- Cloudflare Workers
+- GitHub Pages
+
+## Project status
+
+This repo has changed substantially from its original concept.
+
+What the app is now:
+
+- a shortlist builder around shared Letterboxd watchlists
+- optimized for speed and low-friction usage
+- progressively hydrated rather than fully blocking on detail scraping
+
+What still exists in the repo but is no longer the main product:
+
+- the older recommendation/swipe/taste-profile flow
+- legacy TMDB-based recommendation services
+- scoring tests for the retired recommendation engine
+
+Those files are still useful as historical context, but the live app path is
+the `landing -> pair-loading -> pair-results` flow.
+
+## Repo map
+
+```text
+src/
+├── app/
+│   └── SessionContext.tsx         # Active app/session state
+├── components/
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   ├── Poster.tsx
+│   └── StepShell.tsx
+├── features/
+│   ├── onboarding/
+│   │   └── LandingPage.tsx
+│   └── pair/
+│       ├── PairLoadingPage.tsx
+│       └── PairResultsPage.tsx
+├── services/
+│   ├── letterboxdScrape.ts        # HTML scraping, caching, throttling, proxies
+│   └── pairWatchlists.ts          # Pairing, stub emission, enrichment, watched filter
+├── styles/
+└── utils/
+
+worker/
+├── index.js                       # Cloudflare Worker proxy
+├── local-proxy.mjs                # Local Node proxy for development
+└── wrangler.toml
+```
+
+## Progressive loading architecture
+
+The current app is tuned to feel much faster than a naive "scrape everything,
+then render" flow.
+
+Key ideas:
+
+- Watchlists are scraped first and intersected quickly.
+- Stubs are built from list-page metadata and rendered immediately.
+- Film detail pages enrich cards progressively in the background.
+- The final results page keeps accepting streamed updates after navigation.
+- Poster fallbacks recover when a better poster URL arrives later.
+
+This means users can start interacting with the shortlist before every film has
+finished enriching.
+
+## Proxy strategy
+
+Matchboxd reads public Letterboxd HTML pages, not an official public API.
+
+Proxy order:
+
+1. Local proxy on `localhost:8787` during local development
+2. Configured custom proxy via `VITE_RSS_BASE_URL`
+3. Public fallbacks such as `allorigins`, `codetabs`, and `corsproxy.io`
+
+Production recommendation:
+
+- use the Cloudflare Worker in `worker/`
+- point `VITE_RSS_ADAPTER=custom`
+- set `VITE_RSS_BASE_URL` to your deployed Worker URL
+
+The Worker is currently a lightweight pass-through proxy with origin and target
+restrictions plus short edge caching.
 
 ## Quick start
 
 ```bash
-# 1. Install deps
 npm install
-
-# 2. Configure environment
 cp .env.example .env
-# edit .env and set VITE_TMDB_API_KEY
-
-# 3. Run locally
 npm run dev
+```
 
-# 4. Build for production
-npm run build
+Open the app locally and, if you want the fastest and most reliable local
+Letterboxd fetches, run the local proxy in a second terminal:
 
-# 5. Preview the production build
-npm run preview
+```bash
+node worker/local-proxy.mjs
 ```
 
 ## Environment variables
 
-All variables must start with `VITE_` to be bundled. Remember: **any
-`VITE_*` value is shipped to the browser and publicly visible** in the
-compiled JavaScript. Only use keys you're willing to expose.
+All `VITE_*` variables are bundled into the frontend, so treat them as public.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `VITE_TMDB_API_KEY` | TMDB v3 API key. Without it, posters/synopses/providers are unavailable and the app runs in a limited mode. | *(empty)* |
-| `VITE_RSS_ADAPTER` | `rss2json` · `allorigins` · `custom` | `rss2json` |
-| `VITE_RSS_BASE_URL` | Required when `VITE_RSS_ADAPTER=custom`. Your proxy must accept `?url=<letterboxd-rss>` and return raw XML. | *(empty)* |
-| `VITE_APP_BASE_PATH` | Vite base path. `/matchboxd/` for GitHub Pages project sites, `/` for custom domains. | `/matchboxd/` |
+| `VITE_RSS_ADAPTER` | Proxy mode: `rss2json`, `allorigins`, or `custom` | `allorigins` |
+| `VITE_RSS_BASE_URL` | Required for `custom`; should accept `?url=<encoded-target>` | *(empty)* |
+| `VITE_APP_BASE_PATH` | Vite base path for GitHub Pages or custom domains | `/matchboxd/` |
 
-### TMDB
+Notes:
 
-Get a free v3 API key at https://www.themoviedb.org/settings/api. The app
-uses TMDB for posters, backdrops, synopses, genres, runtime, directors, and
-TR watch providers.
+- The current shortlist flow does not require TMDB.
+- Some older files still reference `VITE_TMDB_API_KEY`, but that is legacy
+  surface area rather than the active product path.
 
-> **TMDB attribution is required.** This product uses the TMDB API but is
-> not endorsed or certified by TMDB. The attribution is shown in the app's
-> footer and retained in the project README per TMDB's terms.
+## Development commands
 
-### RSS adapters
-
-- **rss2json** *(default)*: Uses `api.rss2json.com`. No key. Rate-limited
-  to ~10 requests/hour for anonymous callers, which is usually enough for
-  one matchmaking session.
-- **allorigins**: Uses `api.allorigins.win`. A public CORS pass-through.
-  Slower and occasionally flaky.
-- **custom**: Host your own tiny proxy (Cloudflare Worker, Vercel Edge
-  Function, etc.) and point `VITE_RSS_BASE_URL` at it. Recommended for
-  production-scale use.
-
-## Deploy to GitHub Pages
-
-This repo ships with a GitHub Actions workflow that builds and deploys to
-Pages on every push to `main`.
-
-1. Push the repo to `github.com/<user>/matchboxd`.
-2. In the repo's **Settings → Pages**, set **Source** to **GitHub Actions**.
-3. (Optional) In **Settings → Secrets and variables → Actions**:
-   - Add repository secret `VITE_TMDB_API_KEY`.
-   - Add repository variable `VITE_RSS_ADAPTER` if you want to override the
-     default (`rss2json`).
-4. Push to `main`. The workflow builds, tests, and deploys. The app will
-   appear at `https://<user>.github.io/matchboxd/`.
-
-### Using a custom domain
-
-If you're deploying to the root of a custom domain, set
-`VITE_APP_BASE_PATH=/` in the workflow's `env:` block (or in repo variables).
-
-## Commands
-
-| Command | What it does |
+| Command | Purpose |
 |---|---|
-| `npm run dev` | Local dev server with HMR |
-| `npm run build` | Type-check and build production bundle |
-| `npm run preview` | Serve the production build locally |
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | Type-check and build for production |
+| `npm run preview` | Preview the production build locally |
 | `npm run lint` | Type-check without emitting |
-| `npm test` | Run unit tests (vitest) |
+| `npm test` | Run Vitest tests |
 
-## Architecture
+## Deploying
 
+### GitHub Pages
+
+This repo is set up to deploy the frontend to GitHub Pages via GitHub Actions.
+
+Expected base path:
+
+- `/matchboxd/` for project pages like `https://<user>.github.io/matchboxd/`
+- `/` for root-level custom domains
+
+### Cloudflare Worker
+
+Deploy the Worker separately from the static site.
+
+```bash
+cd worker
+npx wrangler deploy
 ```
-src/
-├── app/                    # App shell + session context
-├── components/             # Reusable UI primitives (Button, Poster, Badge…)
-├── features/
-│   ├── onboarding/         # Landing page + username entry
-│   ├── analysis/           # Fetch + profile-building loading UI
-│   ├── filters/            # Mood + constraint picker
-│   ├── swipe/              # Card stack + swipe gestures
-│   └── results/            # Reveal, categories, featured pick
-├── services/               # TMDB, Letterboxd, taste profile, scoring, engine
-├── hooks/                  # useLocalStorage, useMediaQuery
-├── types/                  # Domain types
-├── data/                   # Fallback movies, genre maps, mood/constraint lists
-├── utils/                  # cn, env, confidence helpers, slug utils
-└── styles/
+
+Then configure the frontend to use it:
+
+```bash
+VITE_RSS_ADAPTER=custom
+VITE_RSS_BASE_URL=https://<your-worker>.workers.dev/
 ```
 
-### Recommendation engine
+## Known limitations
 
-The scoring engine is deliberately transparent. No black-box "AI" — just
-heuristics you can read and adjust in `src/services/scoring.ts` and
-`src/services/recommendationEngine.ts`.
+- Letterboxd scraping is still dependent on public HTML structure.
+- Public fallback proxies can still be rate-limited.
+- The `Hide watched` filter is intentionally lazy, so it is not applied during
+  the first instant render.
+- The README now reflects the current shortlist app, but the repo still
+  contains legacy recommendation-engine code that has not yet been removed.
 
-Signals used:
-- **Genre affinity** — overlap of each user's top genres with a candidate's
-  genres (cosine-like over a normalized map).
-- **Decade affinity** — do both users like this era?
-- **Director affinity** — quietly strong when data is rich.
-- **Mood fit** — deterministic genre/runtime heuristics per mood.
-- **Availability fit** — TR watch provider presence when "available tonight
-  in Turkey" is selected.
-- **Balance** — we reward candidates with a high *minimum* affinity
-  between the two profiles, not just a high average. This keeps the app
-  from recommending films that leave one person out.
+## Legal note
 
-### Recommendation categories
+Matchboxd reads only public Letterboxd pages and does not require users to log
+in or expose private data. That said, scraping public pages still carries legal
+and platform-risk questions, especially if the product grows beyond hobby use.
 
-Matchboxd draws a clear line between **deterministic** and **inferred** picks.
+For the current state of the app:
 
-| Category | Kind | Logic |
-|---|---|---|
-| Watchlist overlap | deterministic | On both public watchlists |
-| Shared rewatch | deterministic | Both seen and both rated ≥ 3.5 |
-| Taste match | inferred | TMDB discover via shared top genres |
-| Stretch pick | inferred | Closer to one person's zone; ownership is shown |
-
-Deterministic picks are ranked above inferred picks at equal score.
-
-### Confidence
-
-Each candidate gets one of: **high**, **moderate**, **exploratory**.
-Deterministic picks are high. Inferred picks reflect the lower of the two
-user confidences. Cold-start fallback picks are always **exploratory** and
-include a "broadly loved, safe start" tag.
-
-### Result categories
-
-After swiping:
-
-- **Best mutual fit** — highest-scored mutual yes, with super-like boost
-- **Safest pick** — hard to regret, high confidence
-- **Adventure pick** — stretchier but still plausible
-- **One in @A's zone** / **One in @B's zone** — where each person leans
-- **True overlap** — mutual watchlist or shared rewatch
-- **All mutuals** — every mutual yes
-
-If you want a tie-breaker, the **Final duel** button runs a one-shot
-comparison between the top two mutuals, weighted by super-likes.
-
-### Sparse-data fallback
-
-When either profile has fewer than ~8 public entries, the app:
-- adds a visible note on the filters screen,
-- weakens the taste engine's contribution,
-- pulls more from the fallback seed list (`src/data/fallbackMovies.ts`),
-- tags those candidates "broadly loved, safe start",
-- leans more on mood filters for candidate selection.
-
-### Persistence
-
-LocalStorage keys:
-
-| Key | Contents |
-|---|---|
-| `matchboxd:session:v1` | usernames, current step, filters, candidates (including swipe progress) |
-| `matchboxd:history:v1` | last 20 finished sessions with the winning pick |
-
-Session resumes automatically on reload, including mid-swipe.
+- the public hobby deployment uses the current scraping/proxy path
+- the Cloudflare Worker improves reliability, not legal clearance
+- a safer long-term data strategy is still worth pursuing
 
 ## Testing
 
 ```bash
 npm test
+npm run build
 ```
 
-Unit tests in `src/services/scoring.test.ts` cover the clamp helper,
-similarity, candidate affinity, mood fit, hard-constraint filtering,
-ownership labelling, and full score aggregation.
-
-## Contributing notes
-
-- Type-safe throughout. `npm run lint` must pass.
-- All heuristics live in `src/services/scoring.ts`. Changing a weight
-  there propagates to the whole engine.
-- The Letterboxd adapter is swappable — you can drop in a JSON API or
-  GraphQL gateway later by implementing `fetchUserActivity` / `fetchUserWatchlist`.
+Current automated tests mostly cover legacy scoring utilities. The live
+shortlist flow is validated primarily through type-checking, build success, and
+manual product testing.
 
 ## License
 
-MIT — do whatever you like, just keep the TMDB attribution.
+MIT
