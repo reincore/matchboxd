@@ -91,10 +91,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isEnriching, setIsEnriching] = useState(false);
   const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
   const pairingRunIdRef = useRef(0);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     // Pair loading/results depend on in-memory data that is not restored after
-    // a hard refresh, so reopen the app on the landing step instead.
+    // a hard refresh, so reopen the app on the landing step on initial load.
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+    } else {
+      return;
+    }
+
     if (persisted.step === 'pair-loading' || persisted.step === 'pair-results') {
       setPersisted((p) => ({ ...p, step: 'landing' }));
     }
