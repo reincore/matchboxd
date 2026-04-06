@@ -13,7 +13,7 @@ import {
 
 export function PairLoadingPage() {
   const {
-    userA, userB, setStep, setPairResult,
+    userA, userB, setStep,
     setStreamingStubs, updateStreamingItem, finalizeEnrichment,
   } = useSession();
   const [progress, setProgress] = useState<PairWatchlistProgress>({
