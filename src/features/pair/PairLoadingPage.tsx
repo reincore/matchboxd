@@ -153,7 +153,7 @@ function Spinner() {
       <circle cx="12" cy="12" r="9" stroke="#262b3c" strokeWidth="2.5" />
       <path
         d="M21 12a9 9 0 0 0-9-9"
-        stroke="#ff7a59"
+        stroke="#ec4899"
         strokeWidth="2.5"
         strokeLinecap="round"
       />
