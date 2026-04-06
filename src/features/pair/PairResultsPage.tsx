@@ -366,8 +366,15 @@ function FilterBar({
 function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: string; userB: string }) {
   if (source === 'both') return null;
   const label = source === 'userA' ? `@${userA}` : `@${userB}`;
+  const tone =
+    source === 'userA'
+      ? 'border-accent/30 bg-accent/10 text-accent-soft'
+      : 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200';
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-md border border-accent/30 bg-accent/10 text-[10px] font-medium text-accent-soft">
+    <span className={cn(
+      'inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium',
+      tone,
+    )}>
       {label} only
     </span>
   );
