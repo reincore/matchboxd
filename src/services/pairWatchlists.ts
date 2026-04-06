@@ -160,18 +160,29 @@ export async function pairWatchlists(
       pageTotal: total,
     });
   };
-  const [listA, listB] = await Promise.all([
-    scrapeWatchlist(cleanA, maxWatchlistPages, (p) => {
-      progress.a.done = p.page;
-      progress.a.total = p.total;
-      emitWatchlistProgress();
-    }),
-    scrapeWatchlist(cleanB, maxWatchlistPages, (p) => {
-      progress.b.done = p.page;
-      progress.b.total = p.total;
-      emitWatchlistProgress();
-    }),
-  ]);
+  let listA: string[];
+  let listB: string[];
+  try {
+    [listA, listB] = await Promise.all([
+      scrapeWatchlist(cleanA, maxWatchlistPages, (p) => {
+        progress.a.done = p.page;
+        progress.a.total = p.total;
+        emitWatchlistProgress();
+      }),
+      scrapeWatchlist(cleanB, maxWatchlistPages, (p) => {
+        progress.b.done = p.page;
+        progress.b.total = p.total;
+        emitWatchlistProgress();
+      }),
+    ]);
+  } catch (err) {
+    const msg =
+      err instanceof Error ? err.message : String(err);
+    throw new PairWatchlistError(
+      `Couldn't read watchlists — the CORS proxies may be rate-limited. Try again in a minute.\n\nDetails: ${msg}`,
+      err,
+    );
+  }
   if (listA.length === 0) {
     throw new PairWatchlistError(
       `Couldn't read @${cleanA}'s watchlist. Make sure the profile exists and the watchlist is set to public in their Letterboxd privacy settings.`,

@@ -18,9 +18,9 @@ export default {
           100: '#e5e8f2',
         },
         accent: {
-          DEFAULT: '#ff7a59',
-          soft: '#ffb199',
-          deep: '#d84a2a',
+          DEFAULT: '#ec4899',
+          soft: '#f9a8d4',
+          deep: '#db2777',
         },
         emerald: {
           glow: '#4ade80',
@@ -45,7 +45,7 @@ export default {
       },
       boxShadow: {
         card: '0 20px 60px -20px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.3)',
-        'accent-glow': '0 0 0 1px rgba(255,122,89,0.3), 0 10px 40px -10px rgba(255,122,89,0.35)',
+        'accent-glow': '0 0 0 1px rgba(236,72,153,0.3), 0 10px 40px -10px rgba(236,72,153,0.35)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',

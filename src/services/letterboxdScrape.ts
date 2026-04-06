@@ -203,41 +203,50 @@ async function fetchHtml(targetUrl: string, timeoutMs = 15000): Promise<string> 
   if (existing) return existing;
 
   const promise = (async () => {
-    const proxies = sortedProxies();
+    const MAX_ROUNDS = 2;
     let lastErr: unknown;
-    for (let attempt = 0; attempt < proxies.length; attempt += 1) {
-      const proxy = proxies[attempt];
-      try {
-        await acquireSlot();
-        const res = await fetchWithTimeout(proxy.build(targetUrl), timeoutMs);
-        if (!res.ok) {
-          PROXY_COOLDOWNS.set(proxy.name, Date.now());
-          lastErr = new LetterboxdScrapeError(
-            `${proxy.name} returned ${res.status} for ${targetUrl}`,
-          );
-          if (res.status === 429 || res.status === 503) {
-            await delay(1200);
+    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+      if (round > 0) {
+        // Before retrying, clear cooldowns so every proxy gets another shot,
+        // and wait a bit for Cloudflare rate limits to relax.
+        PROXY_COOLDOWNS.clear();
+        await delay(3000);
+      }
+      const proxies = sortedProxies();
+      for (let attempt = 0; attempt < proxies.length; attempt += 1) {
+        const proxy = proxies[attempt];
+        try {
+          await acquireSlot();
+          const res = await fetchWithTimeout(proxy.build(targetUrl), timeoutMs);
+          if (!res.ok) {
+            PROXY_COOLDOWNS.set(proxy.name, Date.now());
+            lastErr = new LetterboxdScrapeError(
+              `${proxy.name} returned ${res.status} for ${targetUrl}`,
+            );
+            if (res.status === 429 || res.status === 503) {
+              await delay(1200);
+            }
+            continue;
           }
-          continue;
+          const text = await res.text();
+          if (text.length < 500 || looksRateLimited(text) || !looksLikeLetterboxd(text)) {
+            // Rate-limited body. DON'T cooldown this proxy for long —
+            // the rate limit is Letterboxd's edge, not the proxy itself.
+            lastErr = new LetterboxdScrapeError(
+              `${proxy.name} returned rate-limit/empty for ${targetUrl}`,
+            );
+            await delay(800);
+            continue;
+          }
+          HTML_CACHE.set(targetUrl, text);
+          writeToSession(targetUrl, text);
+          return text;
+        } catch (err) {
+          // Network error = proxy genuinely unreachable — cooldown.
+          PROXY_COOLDOWNS.set(proxy.name, Date.now());
+          lastErr = err;
+          await delay(400);
         }
-        const text = await res.text();
-        if (text.length < 500 || looksRateLimited(text) || !looksLikeLetterboxd(text)) {
-          // Rate-limited body. DON'T cooldown this proxy for long —
-          // the rate limit is Letterboxd's edge, not the proxy itself.
-          lastErr = new LetterboxdScrapeError(
-            `${proxy.name} returned rate-limit/empty for ${targetUrl}`,
-          );
-          await delay(800);
-          continue;
-        }
-        HTML_CACHE.set(targetUrl, text);
-        writeToSession(targetUrl, text);
-        return text;
-      } catch (err) {
-        // Network error = proxy genuinely unreachable — cooldown.
-        PROXY_COOLDOWNS.set(proxy.name, Date.now());
-        lastErr = err;
-        await delay(400);
       }
     }
     throw new LetterboxdScrapeError(`All proxies failed for ${targetUrl}`, lastErr);

@@ -48,11 +48,11 @@ function Logo() {
           width="18"
           height="14"
           rx="2"
-          stroke="#ff7a59"
+          stroke="#ec4899"
           strokeWidth="1.5"
         />
-        <circle cx="9" cy="12" r="2" fill="#ff7a59" />
-        <circle cx="15" cy="12" r="2" fill="#ff7a59" fillOpacity="0.4" />
+        <circle cx="9" cy="12" r="2" fill="#ec4899" />
+        <circle cx="15" cy="12" r="2" fill="#ec4899" fillOpacity="0.4" />
       </svg>
     </div>
   );
