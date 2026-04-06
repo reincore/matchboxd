@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useSession } from '../../app/SessionContext';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
@@ -6,6 +6,7 @@ import { Poster } from '../../components/Poster';
 import { StepShell } from '../../components/StepShell';
 import { Button } from '../../components/Button';
 import type { PairWatchlistItem, ItemSource } from '../../services/pairWatchlists';
+import { scrapeWatchedPair } from '../../services/pairWatchlists';
 import { cn } from '../../utils/cn';
 
 type MoodFilter = 'all' | 'horror' | 'romcom' | 'recent';
@@ -27,18 +28,52 @@ const SORT_OPTIONS: { id: SortOption; label: string }[] = [
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
-const RECENT_THRESHOLD = CURRENT_YEAR - 5; // films from the last 5 years
+const RECENT_THRESHOLD = CURRENT_YEAR - 5;
 
 export function PairResultsPage() {
-  const { pairResult, userA, userB, setStep, reset } = useSession();
+  const {
+    pairResult, streamingItems, isEnriching, pairCounts,
+    userA, userB, setStep, reset,
+  } = useSession();
   const [mood, setMood] = useState<MoodFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [underOneHundred, setUnderOneHundred] = useState(false);
   const [sort, setSort] = useState<SortOption>('rating');
 
+  // "Hide watched" state — loaded lazily on first toggle.
+  const [watchedSlugs, setWatchedSlugs] = useState<Set<string> | null>(null);
+  const [hideWatched, setHideWatched] = useState(false);
+  const [loadingWatched, setLoadingWatched] = useState(false);
+
+  // Use streaming items while enriching; final pairResult items when done.
+  const items = pairResult ? pairResult.items : streamingItems;
+  const counts = pairResult ? pairResult.counts : pairCounts;
+
+  const handleHideWatchedToggle = useCallback(async () => {
+    if (hideWatched) {
+      setHideWatched(false);
+      return;
+    }
+    // First toggle: scrape watched lists lazily.
+    if (!watchedSlugs) {
+      setLoadingWatched(true);
+      try {
+        const slugs = await scrapeWatchedPair(userA, userB);
+        setWatchedSlugs(slugs);
+        setHideWatched(true);
+      } catch {
+        // Silently fail — user can try again.
+      } finally {
+        setLoadingWatched(false);
+      }
+    } else {
+      setHideWatched(true);
+    }
+  }, [hideWatched, watchedSlugs, userA, userB]);
+
   const filtered = useMemo(() => {
-    if (!pairResult) return [];
-    const items = pairResult.items.filter((item) => {
+    const pool = items.filter((item) => {
+      if (hideWatched && watchedSlugs?.has(item.slug)) return false;
       if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
       if (sourceFilter === 'both' && item.source !== 'both') return false;
       if (sourceFilter === 'userA' && item.source !== 'userA') return false;
@@ -56,11 +91,10 @@ export function PairResultsPage() {
       }
       return true;
     });
-    return sortItems(items, sort);
-  }, [pairResult, mood, sourceFilter, underOneHundred, sort]);
+    return sortItems(pool, sort);
+  }, [items, mood, sourceFilter, underOneHundred, hideWatched, watchedSlugs, sort]);
 
-  if (!pairResult) {
-    // Fallback for the unlikely case where we landed here without data.
+  if (!counts && items.length === 0) {
     return (
       <StepShell>
         <Header onRestart={reset} />
@@ -89,32 +123,37 @@ export function PairResultsPage() {
               @{userA} <span className="text-ink-500">×</span> @{userB}
             </h1>
             <p className="text-ink-300 text-sm leading-relaxed">
-              {pairResult.counts.overlap === 0 ? (
+              {counts && counts.overlap === 0 ? (
                 <>
                   No films in common yet. Try adding more to either watchlist
                   and come back.
                 </>
-              ) : (
+              ) : counts ? (
                 <>
                   <span className="text-ink-100 font-medium">
-                    {pairResult.counts.filtered}
+                    {counts.overlap}
                   </span>{' '}
-                  shared film{pairResult.counts.filtered === 1 ? '' : 's'}{' '}
-                  neither of you has watched — from{' '}
+                  shared film{counts.overlap === 1 ? '' : 's'}
+                  {' '}from{' '}
                   <span className="text-ink-200">
-                    {pairResult.counts.watchlistA}
+                    {counts.watchlistA}
                   </span>{' '}
                   &{' '}
                   <span className="text-ink-200">
-                    {pairResult.counts.watchlistB}
+                    {counts.watchlistB}
                   </span>{' '}
                   watchlist entries.
+                  {isEnriching && (
+                    <span className="text-accent-soft ml-1">
+                      Loading details…
+                    </span>
+                  )}
                 </>
-              )}
+              ) : null}
             </p>
           </div>
 
-          {pairResult.items.length > 0 && (
+          {items.length > 0 && (
             <FilterBar
               mood={mood}
               onMoodChange={setMood}
@@ -122,6 +161,9 @@ export function PairResultsPage() {
               onSourceFilterChange={setSourceFilter}
               underOneHundred={underOneHundred}
               onUnderOneHundredChange={setUnderOneHundred}
+              hideWatched={hideWatched}
+              loadingWatched={loadingWatched}
+              onHideWatchedToggle={handleHideWatchedToggle}
               sort={sort}
               onSortChange={setSort}
               count={totalShown}
@@ -132,19 +174,28 @@ export function PairResultsPage() {
 
           {filtered.length === 0 ? (
             <EmptyState
-              hasAny={pairResult.items.length > 0}
+              hasAny={items.length > 0}
               onClear={() => {
                 setMood('all');
                 setSourceFilter('all');
                 setUnderOneHundred(false);
+                setHideWatched(false);
               }}
             />
           ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-              {filtered.map((item) => (
-                <FilmRow key={item.slug} item={item} userA={userA} userB={userB} />
-              ))}
-            </ul>
+            <>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                {filtered.map((item) => (
+                  <FilmRow key={item.slug} item={item} userA={userA} userB={userB} />
+                ))}
+              </ul>
+              {isEnriching && (
+                <div className="flex items-center justify-center gap-2 py-6 text-ink-400 text-sm">
+                  <MiniSpinner />
+                  Loading more details…
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -182,6 +233,9 @@ interface FilterBarProps {
   onSourceFilterChange: (s: SourceFilter) => void;
   underOneHundred: boolean;
   onUnderOneHundredChange: (v: boolean) => void;
+  hideWatched: boolean;
+  loadingWatched: boolean;
+  onHideWatchedToggle: () => void;
   sort: SortOption;
   onSortChange: (s: SortOption) => void;
   count: number;
@@ -196,6 +250,9 @@ function FilterBar({
   onSourceFilterChange,
   underOneHundred,
   onUnderOneHundredChange,
+  hideWatched,
+  loadingWatched,
+  onHideWatchedToggle,
   sort,
   onSortChange,
   count,
@@ -244,6 +301,23 @@ function FilterBar({
           Under 100 min
         </button>
 
+        <button
+          type="button"
+          onClick={onHideWatchedToggle}
+          disabled={loadingWatched}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
+            hideWatched
+              ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300'
+              : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
+            loadingWatched && 'opacity-60',
+          )}
+          aria-pressed={hideWatched}
+        >
+          {loadingWatched ? <MiniSpinner /> : <span aria-hidden>👁</span>}
+          Hide watched
+        </button>
+
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-wider text-ink-500">
             {count} shown
@@ -288,7 +362,10 @@ function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: stri
 
 function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: string; userB: string }) {
   return (
-    <li className="surface-card overflow-hidden flex gap-3 p-3">
+    <li className={cn(
+      'surface-card overflow-hidden flex gap-3 p-3 transition-opacity',
+      !item.enriched && 'opacity-80',
+    )}>
       <a
         href={item.letterboxdUrl}
         target="_blank"
@@ -392,6 +469,27 @@ function ArrowIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MiniSpinner() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className="animate-spin shrink-0"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.2" />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
       />
     </svg>
   );

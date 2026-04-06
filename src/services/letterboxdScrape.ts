@@ -108,22 +108,20 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
-/** Global throttle: ensures at most one outgoing request every MIN_GAP_MS.
- *  Letterboxd's Cloudflare edge starts returning 1015 after a short burst
- *  when hit through a shared CORS proxy, so we have to space ourselves out. */
-// Throttle: when going through shared public proxies we need ~1200ms to avoid
-// Cloudflare rate limits. For localhost or custom proxies we can go faster.
-const MIN_GAP_MS =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 100
-    : 1200;
-let lastRequestAt = 0;
+/** Per-proxy throttle: each proxy gets its own 1200ms gate so requests to
+ *  different proxies can proceed in parallel. Cloudflare rate limits are
+ *  per-origin, not per-client, so spreading across proxies is safe. */
+const IS_LOCALHOST =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const MIN_GAP_MS = IS_LOCALHOST ? 100 : 1200;
+const PROXY_LAST_REQUEST = new Map<string, number>();
 
-async function acquireSlot(): Promise<void> {
+async function acquireSlot(proxyName: string): Promise<void> {
   const now = Date.now();
-  const next = Math.max(now, lastRequestAt + MIN_GAP_MS);
+  const last = PROXY_LAST_REQUEST.get(proxyName) ?? 0;
+  const next = Math.max(now, last + MIN_GAP_MS);
   const wait = next - now;
-  lastRequestAt = next;
+  PROXY_LAST_REQUEST.set(proxyName, next);
   if (wait > 0) await delay(wait);
 }
 
@@ -216,7 +214,7 @@ async function fetchHtml(targetUrl: string, timeoutMs = 15000): Promise<string> 
       for (let attempt = 0; attempt < proxies.length; attempt += 1) {
         const proxy = proxies[attempt];
         try {
-          await acquireSlot();
+          await acquireSlot(proxy.name);
           const res = await fetchWithTimeout(proxy.build(targetUrl), timeoutMs);
           if (!res.ok) {
             PROXY_COOLDOWNS.set(proxy.name, Date.now());
@@ -269,8 +267,20 @@ function parseHtml(html: string): Document {
 // -----------------------------------------------------------------------------
 
 // Cache of slug → Letterboxd film ID, populated during watchlist scraping.
-// Used to construct fallback poster URLs when detail scraping fails.
-const FILM_ID_CACHE = new Map<string, string>();
+// Cache of slug → metadata from watchlist pages, populated during scraping.
+// Used to build instant stubs before detail pages load.
+export interface ListPageMeta {
+  filmId?: string;
+  title?: string;
+  year?: number;
+  posterUrl?: string;
+}
+const LIST_PAGE_META = new Map<string, ListPageMeta>();
+
+/** Look up metadata captured from watchlist pages. */
+export function getListPageMeta(slug: string): ListPageMeta | undefined {
+  return LIST_PAGE_META.get(slug);
+}
 
 /** Construct a best-guess poster URL from a Letterboxd film ID and slug.
  *  Works for ~80%+ of films; the Poster component handles 404s gracefully. */
@@ -280,19 +290,40 @@ function guessPosterUrl(filmId: string, slug: string, width = 230): string {
   return `https://a.ltrbxd.com/resized/film-poster/${path}/${filmId}-${slug}-0-${width}-0-${height}-crop.jpg`;
 }
 
+/** Parse "Title Name (2023)" into { title, year }. */
+function parseItemName(name: string): { title: string; year?: number } {
+  const m = name.match(/^(.+?)\s*\((\d{4})\)\s*$/);
+  if (m) return { title: m[1].trim(), year: Number(m[2]) };
+  return { title: name.trim() };
+}
+
 /** Extract all film slugs from a watchlist/films-list page. Letterboxd uses
  *  a `data-item-slug` (sometimes `data-film-slug`) attribute on poster cards.
- *  Also extracts `data-film-id` into FILM_ID_CACHE for fallback poster URLs. */
+ *  Also extracts metadata (title, year, filmId) into LIST_PAGE_META. */
 function extractSlugsFromListPage(doc: Document): string[] {
   const slugs = new Set<string>();
+
+  /** Capture metadata for a slug from the DOM node's attributes. */
+  function captureMeta(slug: string, node: Element): void {
+    const filmId = node.getAttribute('data-film-id') ?? undefined;
+    const itemName = node.getAttribute('data-item-name') ?? undefined;
+    const parsed = itemName ? parseItemName(itemName) : undefined;
+    const posterUrl = filmId ? guessPosterUrl(filmId, slug, 460) : undefined;
+    LIST_PAGE_META.set(slug, {
+      filmId,
+      title: parsed?.title,
+      year: parsed?.year,
+      posterUrl,
+    });
+  }
+
   // Primary selector: modern poster component exposes data-item-slug.
   doc.querySelectorAll('[data-item-slug]').forEach((node) => {
     const s = node.getAttribute('data-item-slug');
     if (s) {
       const slug = s.toLowerCase();
       slugs.add(slug);
-      const filmId = node.getAttribute('data-film-id');
-      if (filmId) FILM_ID_CACHE.set(slug, filmId);
+      captureMeta(slug, node);
     }
   });
   // Legacy selector seen on some pages.
@@ -301,8 +332,7 @@ function extractSlugsFromListPage(doc: Document): string[] {
     if (s) {
       const slug = s.toLowerCase();
       slugs.add(slug);
-      const filmId = node.getAttribute('data-film-id');
-      if (filmId) FILM_ID_CACHE.set(slug, filmId);
+      captureMeta(slug, node);
     }
   });
   // Also grab data-item-link / data-film-link hrefs.
@@ -481,14 +511,13 @@ export async function scrapeFilm(slug: string): Promise<LetterboxdFilmDetails> {
     MEMORY_CACHE.set(normalized, details);
     return details;
   } catch {
-    // Return a minimal stub so we don't lose this film from the overlap list.
-    // If we captured the film ID during watchlist scraping, construct a
-    // best-guess poster URL so we at least show an image.
-    const filmId = FILM_ID_CACHE.get(normalized);
+    // Return a stub built from list-page metadata so we don't lose this film.
+    const meta = LIST_PAGE_META.get(normalized);
     const stub: LetterboxdFilmDetails = {
       slug: normalized,
-      title: normalized.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-      posterUrl: filmId ? guessPosterUrl(filmId, normalized, 460) : undefined,
+      title: meta?.title ?? normalized.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      year: meta?.year,
+      posterUrl: meta?.posterUrl,
       genres: [],
       directors: [],
     };
