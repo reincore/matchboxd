@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '../utils/cn';
 
 interface PosterProps {
@@ -8,6 +9,9 @@ interface PosterProps {
 }
 
 export function Poster({ src, title, className, rounded = 'xl' }: PosterProps) {
+  const [broken, setBroken] = useState(false);
+  const showImage = src && !broken;
+
   return (
     <div
       className={cn(
@@ -20,13 +24,14 @@ export function Poster({ src, title, className, rounded = 'xl' }: PosterProps) {
         className,
       )}
     >
-      {src ? (
+      {showImage ? (
         <img
           src={src}
           alt={title}
           loading="lazy"
           className="w-full h-full object-cover"
           draggable={false}
+          onError={() => setBroken(true)}
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center p-4 text-center bg-gradient-to-br from-ink-800 to-ink-700">

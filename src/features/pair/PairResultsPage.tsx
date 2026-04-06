@@ -5,10 +5,11 @@ import { Header } from '../../components/Header';
 import { Poster } from '../../components/Poster';
 import { StepShell } from '../../components/StepShell';
 import { Button } from '../../components/Button';
-import type { PairWatchlistItem } from '../../services/pairWatchlists';
+import type { PairWatchlistItem, ItemSource } from '../../services/pairWatchlists';
 import { cn } from '../../utils/cn';
 
 type MoodFilter = 'all' | 'horror' | 'romcom' | 'recent';
+type SourceFilter = 'all' | 'both' | 'userA' | 'userB';
 type SortOption = 'rating' | 'year-desc' | 'runtime-asc' | 'title';
 
 const MOODS: { id: MoodFilter; label: string; emoji: string }[] = [
@@ -31,6 +32,7 @@ const RECENT_THRESHOLD = CURRENT_YEAR - 5; // films from the last 5 years
 export function PairResultsPage() {
   const { pairResult, userA, userB, setStep, reset } = useSession();
   const [mood, setMood] = useState<MoodFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [underOneHundred, setUnderOneHundred] = useState(false);
   const [sort, setSort] = useState<SortOption>('rating');
 
@@ -38,12 +40,13 @@ export function PairResultsPage() {
     if (!pairResult) return [];
     const items = pairResult.items.filter((item) => {
       if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
+      if (sourceFilter === 'both' && item.source !== 'both') return false;
+      if (sourceFilter === 'userA' && item.source !== 'userA') return false;
+      if (sourceFilter === 'userB' && item.source !== 'userB') return false;
       if (mood === 'horror') {
         return item.genres.some((g) => /horror/i.test(g));
       }
       if (mood === 'romcom') {
-        // Must match at least one of (Romance, Comedy). Ideally both, but
-        // pure-genre rom-coms are rare on Letterboxd's genre vocabulary.
         const hasRomance = item.genres.some((g) => /romance/i.test(g));
         const hasComedy = item.genres.some((g) => /comedy/i.test(g));
         return hasRomance || hasComedy;
@@ -54,7 +57,7 @@ export function PairResultsPage() {
       return true;
     });
     return sortItems(items, sort);
-  }, [pairResult, mood, underOneHundred, sort]);
+  }, [pairResult, mood, sourceFilter, underOneHundred, sort]);
 
   if (!pairResult) {
     // Fallback for the unlikely case where we landed here without data.
@@ -115,11 +118,15 @@ export function PairResultsPage() {
             <FilterBar
               mood={mood}
               onMoodChange={setMood}
+              sourceFilter={sourceFilter}
+              onSourceFilterChange={setSourceFilter}
               underOneHundred={underOneHundred}
               onUnderOneHundredChange={setUnderOneHundred}
               sort={sort}
               onSortChange={setSort}
               count={totalShown}
+              userA={userA}
+              userB={userB}
             />
           )}
 
@@ -128,13 +135,14 @@ export function PairResultsPage() {
               hasAny={pairResult.items.length > 0}
               onClear={() => {
                 setMood('all');
+                setSourceFilter('all');
                 setUnderOneHundred(false);
               }}
             />
           ) : (
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
               {filtered.map((item) => (
-                <FilmRow key={item.slug} item={item} />
+                <FilmRow key={item.slug} item={item} userA={userA} userB={userB} />
               ))}
             </ul>
           )}
@@ -170,22 +178,37 @@ function sortItems(items: PairWatchlistItem[], sort: SortOption): PairWatchlistI
 interface FilterBarProps {
   mood: MoodFilter;
   onMoodChange: (m: MoodFilter) => void;
+  sourceFilter: SourceFilter;
+  onSourceFilterChange: (s: SourceFilter) => void;
   underOneHundred: boolean;
   onUnderOneHundredChange: (v: boolean) => void;
   sort: SortOption;
   onSortChange: (s: SortOption) => void;
   count: number;
+  userA: string;
+  userB: string;
 }
 
 function FilterBar({
   mood,
   onMoodChange,
+  sourceFilter,
+  onSourceFilterChange,
   underOneHundred,
   onUnderOneHundredChange,
   sort,
   onSortChange,
   count,
+  userA,
+  userB,
 }: FilterBarProps) {
+  const sourceOptions: { id: SourceFilter; label: string }[] = [
+    { id: 'all', label: 'All films' },
+    { id: 'both', label: 'Both' },
+    { id: 'userA', label: `@${userA}` },
+    { id: 'userB', label: `@${userB}` },
+  ];
+
   return (
     <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-ink-950/85 backdrop-blur-md border-b border-ink-800">
       <div className="flex flex-wrap items-center gap-2">
@@ -226,6 +249,17 @@ function FilterBar({
             {count} shown
           </span>
           <select
+            value={sourceFilter}
+            onChange={(e) => onSourceFilterChange(e.target.value as SourceFilter)}
+            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] px-2 py-1.5 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
+          >
+            {sourceOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <select
             value={sort}
             onChange={(e) => onSortChange(e.target.value as SortOption)}
             className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] px-2 py-1.5 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
@@ -242,7 +276,17 @@ function FilterBar({
   );
 }
 
-function FilmRow({ item }: { item: PairWatchlistItem }) {
+function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: string; userB: string }) {
+  if (source === 'both') return null;
+  const label = source === 'userA' ? `@${userA}` : `@${userB}`;
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-md border border-accent/30 bg-accent/10 text-[10px] font-medium text-accent-soft">
+      {label} only
+    </span>
+  );
+}
+
+function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: string; userB: string }) {
   return (
     <li className="surface-card overflow-hidden flex gap-3 p-3">
       <a
@@ -290,6 +334,7 @@ function FilmRow({ item }: { item: PairWatchlistItem }) {
               {g}
             </MetaPill>
           ))}
+          <SourceBadge source={item.source} userA={userA} userB={userB} />
         </div>
 
         <div className="mt-auto pt-2 flex flex-wrap gap-2 items-center">

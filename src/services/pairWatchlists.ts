@@ -18,6 +18,8 @@ import {
   type LetterboxdFilmDetails,
 } from './letterboxdScrape';
 
+export type ItemSource = 'both' | 'userA' | 'userB';
+
 export interface PairWatchlistItem {
   slug: string;
   title: string;
@@ -32,6 +34,7 @@ export interface PairWatchlistItem {
   tmdbId?: number;
   letterboxdUrl: string;
   justwatchUrl: string;
+  source: ItemSource;
 }
 
 export interface PairWatchlistProgress {
@@ -84,7 +87,7 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
-function toItem(details: LetterboxdFilmDetails): PairWatchlistItem {
+function toItem(details: LetterboxdFilmDetails, source: ItemSource): PairWatchlistItem {
   return {
     slug: details.slug,
     title: details.title,
@@ -98,7 +101,8 @@ function toItem(details: LetterboxdFilmDetails): PairWatchlistItem {
     lbRatingCount: details.lbRatingCount,
     tmdbId: details.tmdbId,
     letterboxdUrl: `https://letterboxd.com/film/${details.slug}/`,
-    justwatchUrl: `https://www.justwatch.com/tr/search?q=${encodeURIComponent(details.title)}`,
+    justwatchUrl: `https://www.justwatch.com/tr/film/${details.slug}`,
+    source,
   };
 }
 
@@ -111,8 +115,10 @@ export interface PairWatchlistsOptions {
   maxWatchedPages?: number;
   /** Parallel requests when enriching film details. */
   detailConcurrency?: number;
-  /** Optional cap on overlap size sent to enrichment. */
+  /** Optional cap on total films sent to enrichment. */
   maxOverlap?: number;
+  /** Cap on near-miss films (from one watchlist only) to enrich. */
+  maxNearMisses?: number;
 }
 
 /** Build the list of films both users want to see and have not seen yet. */
@@ -127,6 +133,7 @@ export async function pairWatchlists(
     maxWatchedPages = 25,
     detailConcurrency = 2,
     maxOverlap = 60,
+    maxNearMisses = 40,
   } = opts;
 
   const cleanA = userA.trim().replace(/^@/, '').toLowerCase();
@@ -194,28 +201,19 @@ export async function pairWatchlists(
     );
   }
 
+  const setA = new Set(listA);
   const setB = new Set(listB);
   const overlap = listA.filter((slug) => setB.has(slug));
+
+  // Near-misses: films on only one person's watchlist.
+  // Take from the front of each list (most recently added = highest intent).
+  const onlyA = listA.filter((slug) => !setB.has(slug));
+  const onlyB = listB.filter((slug) => !setA.has(slug));
 
   onProgress?.({
     stage: 'intersection',
     message: `Found ${overlap.length} shared film${overlap.length === 1 ? '' : 's'} — checking what you've already watched…`,
   });
-
-  if (overlap.length === 0) {
-    return {
-      items: [],
-      userA: cleanA,
-      userB: cleanB,
-      counts: {
-        watchlistA: listA.length,
-        watchlistB: listB.length,
-        overlap: 0,
-        filtered: 0,
-        enriched: 0,
-      },
-    };
-  }
 
   // 2. Watched filter. Best-effort — if either user's watched list can't be
   // read we proceed with an unfiltered overlap.
@@ -251,11 +249,44 @@ export async function pairWatchlists(
   const seen = new Set<string>([...watchedA, ...watchedB]);
   const filtered = overlap.filter((slug) => !seen.has(slug));
 
+  // Near-misses: filter out watched, interleave from both lists evenly.
+  const nearA = onlyA.filter((slug) => !seen.has(slug));
+  const nearB = onlyB.filter((slug) => !seen.has(slug));
+  const nearMisses: { slug: string; source: ItemSource }[] = [];
+  const halfCap = Math.ceil(maxNearMisses / 2);
+  const cappedA = nearA.slice(0, halfCap);
+  const cappedB = nearB.slice(0, halfCap);
+  for (let i = 0; i < Math.max(cappedA.length, cappedB.length); i++) {
+    if (i < cappedA.length) nearMisses.push({ slug: cappedA[i], source: 'userA' });
+    if (i < cappedB.length) nearMisses.push({ slug: cappedB[i], source: 'userB' });
+    if (nearMisses.length >= maxNearMisses) break;
+  }
+
   // Keep a tight cap so enrichment stays fast.
-  const toEnrich = filtered.slice(0, maxOverlap);
+  const overlapToEnrich = filtered.slice(0, maxOverlap);
+  const allToEnrich = [
+    ...overlapToEnrich.map((slug) => ({ slug, source: 'both' as ItemSource })),
+    ...nearMisses,
+  ];
+
+  if (allToEnrich.length === 0) {
+    onProgress?.({ stage: 'done', message: 'Done!' });
+    return {
+      items: [],
+      userA: cleanA,
+      userB: cleanB,
+      counts: {
+        watchlistA: listA.length,
+        watchlistB: listB.length,
+        overlap: overlap.length,
+        filtered: filtered.length,
+        enriched: 0,
+      },
+    };
+  }
 
   // 3. Enrich each film with poster + rating + runtime.
-  const total = toEnrich.length;
+  const total = allToEnrich.length;
   let loaded = 0;
   onProgress?.({
     stage: 'details',
@@ -264,7 +295,7 @@ export async function pairWatchlists(
     detailsTotal: total,
   });
 
-  const details = await runWithConcurrency(toEnrich, detailConcurrency, async (slug) => {
+  const details = await runWithConcurrency(allToEnrich, detailConcurrency, async ({ slug, source }) => {
     try {
       const d = await scrapeFilm(slug);
       loaded += 1;
@@ -274,7 +305,7 @@ export async function pairWatchlists(
         detailsLoaded: loaded,
         detailsTotal: total,
       });
-      return d;
+      return { details: d, source };
     } catch {
       loaded += 1;
       onProgress?.({
@@ -288,8 +319,8 @@ export async function pairWatchlists(
   });
 
   const items = details
-    .filter((d): d is LetterboxdFilmDetails => d !== null)
-    .map(toItem);
+    .filter((d): d is { details: LetterboxdFilmDetails; source: ItemSource } => d !== null)
+    .map((d) => toItem(d.details, d.source));
 
   onProgress?.({ stage: 'done', message: 'Done!' });
 
