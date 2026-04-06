@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 56" role="img" aria-label="Matchboxd">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300&amp;display=swap');
+    </style>
+    <linearGradient id="mk-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#131620"/>
+      <stop offset="1" stop-color="#08090c"/>
+    </linearGradient>
+    <radialGradient id="mk-glow" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ── Icon mark ── -->
+
+  <!-- Rounded-square background (matches app header styling) -->
+  <rect x="0" y="4" width="48" height="48" rx="11" fill="url(#mk-bg)"/>
+  <rect x="0" y="4" width="48" height="48" rx="11"
+        fill="none" stroke="#ec4899" stroke-width="1" stroke-opacity="0.38"/>
+
+  <!-- Pink glow -->
+  <ellipse cx="24" cy="28" rx="19" ry="15" fill="url(#mk-glow)"/>
+
+  <!-- Film frame -->
+  <rect x="7" y="17" width="34" height="22" rx="3"
+        fill="none" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.72"/>
+
+  <!-- Left circle — User A -->
+  <circle cx="19" cy="28" r="6" fill="#ec4899" fill-opacity="0.52"/>
+
+  <!-- Right circle — User B -->
+  <circle cx="29" cy="28" r="6" fill="#ec4899" fill-opacity="0.28"/>
+
+  <!--
+    Intersection lens: cx1=19, cx2=29, r=6, d=10.
+    x=24, y=±√(36−25)=±√11=±3.317 → 24.683 and 31.317.
+  -->
+  <path d="M 24 24.68 A 6 6 0 0 1 24 31.32 A 6 6 0 0 1 24 24.68 Z"
+        fill="#ec4899" fill-opacity="0.80"/>
+
+  <!-- ── Wordmark ── -->
+  <text x="62" y="37"
+        font-family="Fraunces, Georgia, 'Times New Roman', serif"
+        font-size="27"
+        font-weight="300"
+        letter-spacing="-0.4"
+        fill="#e5e8f2">Matchboxd</text>
+</svg>
