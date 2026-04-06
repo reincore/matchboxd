@@ -83,23 +83,18 @@ export function PairResultsPage() {
 
   return (
     <StepShell padded={false}>
-      <Header onRestart={reset} step="shortlist" />
+      <Header onRestart={reset} />
       <main className="flex-1 px-4 sm:px-6 pb-12">
         <div className="max-w-5xl mx-auto w-full">
           <div className="mb-6 pt-2">
-            <div className="text-xs uppercase tracking-wider text-ink-400 mb-2">
-              both watchlists
+            <div className="text-xs uppercase tracking-[0.22em] text-ink-400 mb-2">
+              shortlist
             </div>
             <h1 className="font-display text-3xl sm:text-4xl leading-tight mb-2">
               @{userA} <span className="text-ink-500">×</span> @{userB}
             </h1>
             <p className="text-ink-300 text-sm leading-relaxed">
-              {counts && counts.overlap === 0 ? (
-                <>
-                  No films in common yet. Try adding more to either watchlist
-                  and come back.
-                </>
-              ) : counts ? (
+              {counts ? (
                 <>
                   <span className="text-ink-100 font-medium">
                     {counts.overlap}
