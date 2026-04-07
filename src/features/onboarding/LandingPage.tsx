@@ -37,7 +37,7 @@ export function LandingPage() {
           <div className="mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-ink-700 bg-ink-900/60 text-[11px] xl:text-[12px] text-ink-300 mb-5">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              tonight's movie, settled
+              Stop scrolling. Start watching.
             </div>
             <h1 className="font-display text-4xl sm:text-5xl xl:text-6xl leading-[1.05] tracking-tight mb-4">
               Find tonight's movie without the{' '}
