@@ -11,11 +11,11 @@ export function Header({ onRestart, step, className }: HeaderProps) {
     <>
       <Logo />
       <div>
-        <div className="font-display text-lg leading-none sm:text-xl lg:text-2xl">
+        <div className="font-display text-lg leading-none sm:text-xl lg:text-[1.75rem]">
           Matchboxd
         </div>
         {step && (
-          <div className="mt-0.5 text-[10px] uppercase tracking-widest text-ink-400 sm:text-[11px] lg:text-xs">
+          <div className="mt-0.5 text-[10px] uppercase tracking-widest text-ink-400 sm:text-[11px] lg:text-[13px]">
             {step}
           </div>
         )}
@@ -59,14 +59,14 @@ export function Header({ onRestart, step, className }: HeaderProps) {
 
 function Logo() {
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent/40 bg-accent/15 sm:h-9 sm:w-9 lg:h-11 lg:w-11 lg:rounded-xl">
+    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent/40 bg-accent/15 sm:h-9 sm:w-9 lg:h-12 lg:w-12 lg:rounded-xl">
       <svg
         width="18"
         height="18"
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden
-        className="h-[18px] w-[18px] sm:h-5 sm:w-5 lg:h-6 lg:w-6"
+        className="h-[18px] w-[18px] sm:h-5 sm:w-5 lg:h-7 lg:w-7"
       >
         {/* Film frame */}
         <rect x="3" y="5" width="18" height="14" rx="2" stroke="#ec4899" strokeWidth="1.5" strokeOpacity="0.75" />
