@@ -258,10 +258,10 @@ function FilterBar({
   ];
 
   return (
-    <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-ink-950/85 backdrop-blur-md border-b border-ink-800">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] uppercase tracking-[0.18em] text-ink-500">
+    <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 xl:py-4 bg-ink-950/85 backdrop-blur-md border-b border-ink-800">
+      <div className="flex flex-wrap items-center gap-3 xl:gap-4">
+        <div className="flex flex-wrap items-center gap-2 xl:gap-2.5">
+          <span className="text-[11px] xl:text-[12px] uppercase tracking-[0.18em] text-ink-500">
             Mood
           </span>
           {MOODS.map((m) => (
@@ -270,7 +270,7 @@ function FilterBar({
               type="button"
               onClick={() => onMoodChange(m.id)}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 xl:px-3.5 xl:py-2 rounded-full text-[12px] xl:text-[13px] font-medium border transition-colors focus-ring',
                 mood === m.id
                   ? 'bg-accent/15 border-accent/60 text-accent-soft'
                   : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
@@ -282,15 +282,15 @@ function FilterBar({
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-1 sm:border-l sm:border-ink-800">
-          <span className="text-[11px] uppercase tracking-[0.18em] text-ink-500">
+        <div className="flex flex-wrap items-center gap-2 xl:gap-2.5 pl-0 sm:pl-1 xl:pl-3 sm:border-l sm:border-ink-800">
+          <span className="text-[11px] xl:text-[12px] uppercase tracking-[0.18em] text-ink-500">
             Quick filter
           </span>
           <button
             type="button"
             onClick={() => onUnderOneHundredChange(!underOneHundred)}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
+              'inline-flex items-center gap-1.5 px-3 py-1.5 xl:px-3.5 xl:py-2 rounded-full text-[12px] xl:text-[13px] font-medium border transition-colors focus-ring',
               underOneHundred
                 ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300'
                 : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
@@ -304,7 +304,7 @@ function FilterBar({
             type="button"
             onClick={() => onHighRatedOnlyChange(!highRatedOnly)}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors focus-ring',
+              'inline-flex items-center gap-1.5 px-3 py-1.5 xl:px-3.5 xl:py-2 rounded-full text-[12px] xl:text-[13px] font-medium border transition-colors focus-ring',
               highRatedOnly
                 ? 'bg-amber-500/10 border-amber-400/50 text-amber-200'
                 : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
@@ -316,14 +316,14 @@ function FilterBar({
           </button>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wider text-ink-500">
+        <div className="ml-auto flex items-center gap-2 xl:gap-2.5">
+          <span className="text-[11px] xl:text-[12px] uppercase tracking-wider text-ink-500">
             {count} shown
           </span>
           <select
             value={sourceFilter}
             onChange={(e) => onSourceFilterChange(e.target.value as SourceFilter)}
-            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] px-2 py-1.5 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
+            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] xl:text-[13px] px-2 xl:px-2.5 py-1.5 xl:py-2 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
           >
             {sourceOptions.map((opt) => (
               <option key={opt.id} value={opt.id}>
@@ -334,7 +334,7 @@ function FilterBar({
           <select
             value={sort}
             onChange={(e) => onSortChange(e.target.value as SortOption)}
-            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] px-2 py-1.5 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
+            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] xl:text-[13px] px-2 xl:px-2.5 py-1.5 xl:py-2 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.id} value={opt.id}>
@@ -357,7 +357,7 @@ function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: stri
       : 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200';
   return (
     <span className={cn(
-      'inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium',
+      'inline-flex items-center rounded-md border px-2 py-0.5 xl:px-2.5 xl:py-1 text-[10px] xl:text-[11px] font-medium',
       tone,
     )}>
       {label} only
@@ -368,14 +368,14 @@ function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: stri
 function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: string; userB: string }) {
   return (
     <li className={cn(
-      'surface-card overflow-hidden flex gap-3 p-3 transition-opacity',
+      'surface-card overflow-hidden flex gap-3 xl:gap-4 p-3 xl:p-4 transition-opacity',
       !item.enriched && 'opacity-80',
     )}>
       <a
         href={item.letterboxdUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="block w-24 sm:w-28 shrink-0 focus-ring rounded-xl"
+        className="block w-24 sm:w-28 xl:w-32 shrink-0 focus-ring rounded-xl"
       >
         <Poster src={item.posterUrl} title={item.title} rounded="lg" />
       </a>
@@ -385,17 +385,17 @@ function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: strin
             href={item.letterboxdUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-display text-lg leading-tight hover:text-accent transition-colors line-clamp-2"
+            className="font-display text-lg xl:text-xl leading-tight hover:text-accent transition-colors line-clamp-2"
           >
             {item.title}
             {item.year && (
-              <span className="text-ink-400 font-sans font-normal text-sm ml-1.5">
+              <span className="text-ink-400 font-sans font-normal text-sm xl:text-base ml-1.5">
                 {item.year}
               </span>
             )}
           </a>
           {item.directors.length > 0 && (
-            <div className="text-[12px] text-ink-400 mt-0.5 line-clamp-1">
+            <div className="text-[12px] xl:text-[13px] text-ink-400 mt-0.5 line-clamp-1">
               dir. {item.directors.slice(0, 2).join(', ')}
             </div>
           )}
@@ -424,7 +424,7 @@ function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: strin
             href={item.justwatchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[12px] font-medium text-accent-soft hover:text-accent transition-colors inline-flex items-center gap-1 focus-ring rounded"
+            className="text-[12px] xl:text-[13px] font-medium text-accent-soft hover:text-accent transition-colors inline-flex items-center gap-1 focus-ring rounded"
           >
             Search JustWatch (TR)
             <ArrowIcon />
@@ -438,7 +438,7 @@ function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: strin
 function RatingPill({ rating, count }: { rating: number; count?: number }) {
   const stars = rating.toFixed(2);
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent/10 border border-accent/30 text-[11px] font-medium text-accent-soft">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 xl:px-2.5 xl:py-1 rounded-md bg-accent/10 border border-accent/30 text-[11px] xl:text-[12px] font-medium text-accent-soft">
       <span aria-hidden>★</span>
       {stars}
       {count && count > 0 && (
@@ -454,7 +454,7 @@ function MetaPill({ children, muted }: { children: React.ReactNode; muted?: bool
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2 py-0.5 rounded-md border text-[11px]',
+        'inline-flex items-center px-2 py-0.5 xl:px-2.5 xl:py-1 rounded-md border text-[11px] xl:text-[12px]',
         muted
           ? 'border-ink-700 bg-ink-900/40 text-ink-400'
           : 'border-ink-700 bg-ink-900/60 text-ink-200',
@@ -514,11 +514,11 @@ function EmptyState({
   onClear: () => void;
 }) {
   return (
-    <div className="surface-card p-8 text-center mt-8">
-      <div className="font-display text-xl mb-2">
+    <div className="surface-card p-8 xl:p-10 text-center mt-8">
+      <div className="font-display text-xl xl:text-2xl mb-2">
         {hasAny ? 'Nothing matches those filters.' : 'No overlap yet.'}
       </div>
-      <div className="text-ink-400 text-sm max-w-md mx-auto">
+      <div className="text-ink-400 text-sm xl:text-base max-w-md xl:max-w-lg mx-auto">
         {hasAny
           ? 'Loosen the filters to see more of your shared watchlist.'
           : "You don't currently have any films on both watchlists that you haven't already watched."}
