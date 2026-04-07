@@ -33,17 +33,17 @@ export function LandingPage() {
     <StepShell>
       <Header />
       <main className="flex-1 flex items-center px-4 sm:px-6">
-        <div className="max-w-xl mx-auto w-full py-8">
+        <div className="max-w-xl xl:max-w-2xl mx-auto w-full py-8">
           <div className="mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-ink-700 bg-ink-900/60 text-[11px] text-ink-300 mb-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-ink-700 bg-ink-900/60 text-[11px] xl:text-[12px] text-ink-300 mb-5">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
               tonight's movie, settled
             </div>
-            <h1 className="font-display text-4xl sm:text-5xl leading-[1.05] tracking-tight mb-4">
+            <h1 className="font-display text-4xl sm:text-5xl xl:text-6xl leading-[1.05] tracking-tight mb-4">
               Find tonight's movie without the{' '}
               <span className="text-accent">45-minute debate</span>.
             </h1>
-            <p className="text-ink-300 text-base sm:text-lg leading-relaxed">
+            <p className="text-ink-300 text-base sm:text-lg xl:text-xl leading-relaxed">
               Movies you both want to watch, with ratings and where to stream.
             </p>
           </div>
@@ -97,11 +97,11 @@ interface UsernameFieldProps {
 function UsernameField({ label, value, onChange, placeholder, autoFocus }: UsernameFieldProps) {
   return (
     <label className="block">
-      <span className="block text-xs uppercase tracking-wider text-ink-400 mb-1.5">
+      <span className="block text-xs xl:text-[13px] uppercase tracking-wider text-ink-400 mb-1.5">
         {label}
       </span>
       <div className="flex items-center surface-card focus-within:border-accent/70 transition-colors pl-3">
-        <span className="text-ink-500 text-sm mr-1">@</span>
+        <span className="text-ink-500 text-sm xl:text-base mr-1">@</span>
         <input
           type="text"
           value={value}
@@ -111,7 +111,7 @@ function UsernameField({ label, value, onChange, placeholder, autoFocus }: Usern
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className="flex-1 bg-transparent py-3.5 pr-3 text-base placeholder:text-ink-500 focus:outline-none"
+          className="flex-1 bg-transparent py-3.5 xl:py-4 pr-3 text-base xl:text-lg placeholder:text-ink-500 focus:outline-none"
         />
       </div>
     </label>

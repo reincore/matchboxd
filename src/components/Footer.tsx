@@ -1,14 +1,14 @@
 export function Footer() {
   return (
-    <footer className="mt-auto px-4 sm:px-6 py-6 text-[11px] text-ink-400 border-t border-ink-800/80">
+    <footer className="mt-auto px-4 sm:px-6 py-6 text-[11px] lg:text-[12px] text-ink-400 border-t border-ink-800/80">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <div>Matchboxd · built from your public Letterboxd taste.</div>
-          <div className="mt-1 text-ink-500">
+          <div className="mt-1 text-ink-500 lg:text-[11px]">
             Not affiliated with Letterboxd. Reads public profile pages only.
           </div>
         </div>
-        <div className="flex items-center gap-3 text-ink-500">
+        <div className="flex items-center gap-3 text-ink-500 lg:text-[11px]">
           <a
             href="https://letterboxd.com"
             target="_blank"

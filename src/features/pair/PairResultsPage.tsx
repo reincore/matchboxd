@@ -113,15 +113,15 @@ export function PairResultsPage() {
     <StepShell padded={false}>
       <Header onRestart={reset} />
       <main className="flex-1 px-4 sm:px-6 pb-12">
-        <div className="max-w-5xl mx-auto w-full">
+        <div className="max-w-5xl xl:max-w-6xl mx-auto w-full">
           <div className="mb-6 pt-2">
-            <div className="text-xs uppercase tracking-[0.22em] text-ink-400 mb-2">
+            <div className="text-xs xl:text-[13px] uppercase tracking-[0.22em] text-ink-400 mb-2">
               shortlist
             </div>
-            <h1 className="font-display text-3xl sm:text-4xl leading-tight mb-2">
+            <h1 className="font-display text-3xl sm:text-4xl xl:text-5xl leading-tight mb-2">
               @{userA} <span className="text-ink-500">×</span> @{userB}
             </h1>
-            <p className="text-ink-300 text-sm leading-relaxed">
+            <p className="text-ink-300 text-sm xl:text-base leading-relaxed">
               {counts ? (
                 <>
                   <span className="text-ink-100 font-medium">
@@ -177,7 +177,7 @@ export function PairResultsPage() {
             />
           ) : (
             <>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-5 mt-6">
                 {filtered.map((item) => (
                   <FilmRow key={item.slug} item={item} userA={userA} userB={userB} />
                 ))}

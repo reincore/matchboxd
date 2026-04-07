@@ -67,12 +67,12 @@ export function PairLoadingPage() {
     <StepShell>
       <Header onRestart={() => setStep('landing')} step="matching" />
       <main className="flex-1 flex items-center px-4 sm:px-6">
-        <div className="max-w-lg mx-auto w-full py-8">
+        <div className="max-w-lg xl:max-w-xl mx-auto w-full py-8">
           <div className="mb-8">
-            <div className="text-xs uppercase tracking-wider text-ink-400 mb-2">
+            <div className="text-xs xl:text-[13px] uppercase tracking-wider text-ink-400 mb-2">
               pairing
             </div>
-            <h1 className="font-display text-3xl sm:text-4xl leading-tight">
+            <h1 className="font-display text-3xl sm:text-4xl xl:text-5xl leading-tight">
               @{userA} <span className="text-ink-500">×</span> @{userB}
             </h1>
           </div>
@@ -88,12 +88,12 @@ export function PairLoadingPage() {
               onBack={() => setStep('landing')}
             />
           ) : (
-            <div className="surface-card p-5">
+            <div className="surface-card p-5 xl:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Spinner />
                 <div className="flex-1">
-                  <div className="text-ink-100 text-sm">{progress.message}</div>
-                  <div className="text-[11px] uppercase tracking-wider text-ink-500 mt-0.5">
+                  <div className="text-ink-100 text-sm xl:text-base">{progress.message}</div>
+                  <div className="text-[11px] xl:text-[12px] uppercase tracking-wider text-ink-500 mt-0.5">
                     {stageLabel(progress.stage)}
                   </div>
                 </div>
@@ -108,7 +108,7 @@ export function PairLoadingPage() {
                 />
               </div>
 
-              <div className="text-[11px] text-ink-500 mt-3 leading-relaxed">
+              <div className="text-[11px] xl:text-[12px] text-ink-500 mt-3 leading-relaxed">
                 Scraping Letterboxd through a public CORS proxy. This takes a
                 minute the first time — watchlists can run 20+ pages each.
               </div>
@@ -178,11 +178,11 @@ function ErrorView({
   onBack: () => void;
 }) {
   return (
-    <div className="surface-card p-5">
-      <div className="text-sm text-red-400 mb-1 font-medium">
+    <div className="surface-card p-5 xl:p-6">
+      <div className="text-sm xl:text-base text-red-400 mb-1 font-medium">
         We couldn&apos;t finish matching.
       </div>
-      <div className="text-sm text-ink-300 mb-4">{message}</div>
+      <div className="text-sm xl:text-base text-ink-300 mb-4">{message}</div>
       <div className="flex gap-2">
         <Button variant="secondary" size="md" onClick={onBack}>
           Change usernames
