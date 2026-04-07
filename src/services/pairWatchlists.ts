@@ -88,10 +88,10 @@ async function runWithConcurrency<T, R>(
 }
 
 function buildJustWatchSearchUrl(title: string, year?: number) {
-  const query = [`site:justwatch.com/tr/film`, `"${title}"`, year ? String(year) : '']
+  const query = [title, year ? String(year) : '']
     .filter(Boolean)
     .join(' ');
-  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  return `https://www.justwatch.com/tr/arama?q=${encodeURIComponent(query)}`;
 }
 
 /** Build a stub PairWatchlistItem from list-page metadata (no detail scrape). */
