@@ -10,6 +10,7 @@
 
 import {
   getListPageMeta,
+  LetterboxdScrapeError,
   scrapeFilm,
   scrapeWatchlist,
   upscalePoster,
@@ -152,6 +153,14 @@ export interface PairWatchlistsOptions {
   maxNearMisses?: number;
 }
 
+function watchlistErrorMessage(username: string, err: unknown): string {
+  if (err instanceof LetterboxdScrapeError && err.code === 'not-found') {
+    return `Couldn't find @${username} on Letterboxd. Check the username and try again.`;
+  }
+
+  return `Couldn't read @${username}'s public watchlist. Make sure the profile exists, the watchlist is public, and the proxy isn't being rate-limited.`;
+}
+
 /** Build the list of films both users want to see. */
 export async function pairWatchlists(
   userA: string,
@@ -206,18 +215,21 @@ export async function pairWatchlists(
         progress.a.done = p.page;
         progress.a.total = p.total;
         emitWatchlistProgress();
+      }).catch((err) => {
+        throw new PairWatchlistError(watchlistErrorMessage(cleanA, err), err);
       }),
       scrapeWatchlist(cleanB, maxWatchlistPages, (p) => {
         progress.b.done = p.page;
         progress.b.total = p.total;
         emitWatchlistProgress();
+      }).catch((err) => {
+        throw new PairWatchlistError(watchlistErrorMessage(cleanB, err), err);
       }),
     ]);
   } catch (err) {
-    const msg =
-      err instanceof Error ? err.message : String(err);
+    if (err instanceof PairWatchlistError) throw err;
     throw new PairWatchlistError(
-      `Couldn't read watchlists — the CORS proxies may be rate-limited. Try again in a minute.\n\nDetails: ${msg}`,
+      'Couldn’t read one or both watchlists. The proxy may be rate-limited — try again in a minute.',
       err,
     );
   }

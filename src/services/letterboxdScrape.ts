@@ -16,6 +16,7 @@ const LETTERBOXD_BASE = 'https://letterboxd.com';
 export class LetterboxdScrapeError extends Error {
   constructor(
     message: string,
+    public code: 'not-found' | 'unknown' = 'unknown',
     public cause?: unknown,
   ) {
     super(message);
@@ -233,9 +234,16 @@ async function fetchHtml(targetUrl: string, timeoutMs = 15000): Promise<string> 
           await acquireSlot(proxy.name);
           const res = await fetchWithTimeout(proxy.build(targetUrl), timeoutMs);
           if (!res.ok) {
+            if (res.status === 404) {
+              throw new LetterboxdScrapeError(
+                `Letterboxd returned 404 for ${targetUrl}`,
+                'not-found',
+              );
+            }
             PROXY_COOLDOWNS.set(proxy.name, Date.now());
             lastErr = new LetterboxdScrapeError(
               `${proxy.name} returned ${res.status} for ${targetUrl}`,
+              'unknown',
             );
             if (res.status === 429 || res.status === 503) {
               await delay(1200);
@@ -256,6 +264,9 @@ async function fetchHtml(targetUrl: string, timeoutMs = 15000): Promise<string> 
           writeToSession(targetUrl, text);
           return text;
         } catch (err) {
+          if (err instanceof LetterboxdScrapeError && err.code === 'not-found') {
+            throw err;
+          }
           // Network error = proxy genuinely unreachable — cooldown.
           PROXY_COOLDOWNS.set(proxy.name, Date.now());
           lastErr = err;
@@ -263,7 +274,7 @@ async function fetchHtml(targetUrl: string, timeoutMs = 15000): Promise<string> 
         }
       }
     }
-    throw new LetterboxdScrapeError(`All proxies failed for ${targetUrl}`, lastErr);
+    throw new LetterboxdScrapeError(`All proxies failed for ${targetUrl}`, 'unknown', lastErr);
   })();
 
   IN_FLIGHT.set(targetUrl, promise);
@@ -411,17 +422,17 @@ async function scrapePaginatedList(
       if (page === 1) estimatedTotal = estimateTotalPages(doc, page);
       onPage?.({ page, total: estimatedTotal, collected: allSlugs.length });
       if (!hasNextPage(doc, page)) break;
-    } catch {
+    } catch (err) {
       consecutiveFailures += 1;
+      if (page === 1) {
+        if (err instanceof LetterboxdScrapeError) throw err;
+        throw new LetterboxdScrapeError(`Failed to read page 1 of list`, 'unknown', err);
+      }
       // If we already have some results, stop gracefully rather than fail.
       // The user still gets a partial (but useful) overlap.
       if (allSlugs.length > 0 || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
         break;
       }
-      // First failure on the very first page — this is fatal.
-      if (page === 1) throw new LetterboxdScrapeError(
-        `Failed to read page 1 of list`,
-      );
     }
   }
   // Preserve order, dedupe.
@@ -457,6 +468,7 @@ export async function scrapeWatchlist(
     if (err instanceof LetterboxdScrapeError) throw err;
     throw new LetterboxdScrapeError(
       `Couldn't read @${clean}'s public watchlist. The profile may be private or the proxy may be down.`,
+      'unknown',
       err,
     );
   }

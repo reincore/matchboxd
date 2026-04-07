@@ -8,6 +8,7 @@ dist
 dist-ssr
 build
 *.local
+matchboxd-product-log.md
 
 # editors
 .vscode/*
