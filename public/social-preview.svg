@@ -26,21 +26,21 @@
   <rect width="1200" height="630" fill="url(#glow-left)"/>
   <rect width="1200" height="630" fill="url(#glow-right)"/>
 
-  <g transform="translate(132 145)">
-    <rect x="0" y="0" width="170" height="170" rx="38" fill="url(#card)"/>
-    <rect x="0.5" y="0.5" width="169" height="169" rx="37.5" fill="none" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.42"/>
-    <ellipse cx="85" cy="85" rx="70" ry="54" fill="url(#icon-glow)"/>
-    <rect x="28" y="48" width="114" height="74" rx="10" fill="none" stroke="#ec4899" stroke-width="4.5" stroke-opacity="0.72"/>
-    <circle cx="69" cy="85" r="20" fill="#ec4899" fill-opacity="0.50"/>
-    <circle cx="101" cy="85" r="20" fill="#ec4899" fill-opacity="0.28"/>
-    <path d="M 85 65.51 A 20 20 0 0 1 85 104.49 A 20 20 0 0 1 85 65.51 Z" fill="#ec4899" fill-opacity="0.80"/>
+  <g transform="translate(96 120)">
+    <rect x="0" y="0" width="210" height="210" rx="46" fill="url(#card)"/>
+    <rect x="0.5" y="0.5" width="209" height="209" rx="45.5" fill="none" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.42"/>
+    <ellipse cx="105" cy="105" rx="84" ry="64" fill="url(#icon-glow)"/>
+    <rect x="35" y="59" width="140" height="92" rx="12" fill="none" stroke="#ec4899" stroke-width="5" stroke-opacity="0.72"/>
+    <circle cx="85" cy="105" r="24" fill="#ec4899" fill-opacity="0.50"/>
+    <circle cx="125" cy="105" r="24" fill="#ec4899" fill-opacity="0.28"/>
+    <path d="M 105 81 A 24 24 0 0 1 105 129 A 24 24 0 0 1 105 81 Z" fill="#ec4899" fill-opacity="0.80"/>
   </g>
 
-  <g transform="translate(352 170)">
-    <text x="0" y="112" font-family="Georgia, 'Times New Roman', serif" font-size="110" font-weight="400" letter-spacing="-2" fill="#f4f6fb">Matchboxd</text>
-    <text x="0" y="186" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="600" letter-spacing="4.2" fill="#f9a8d4">STOP SCROLLING. START WATCHING.</text>
-    <text x="0" y="270" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="500" fill="#e5e8f2">Movies you both want to watch,</text>
-    <text x="0" y="322" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="500" fill="#e5e8f2">with ratings and where to stream.</text>
-    <text x="0" y="405" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500" fill="#9ca3af">matchboxd.com</text>
+  <g transform="translate(356 142)">
+    <text x="0" y="122" font-family="Georgia, 'Times New Roman', serif" font-size="124" font-weight="400" letter-spacing="-2.4" fill="#f4f6fb">Matchboxd</text>
+    <text x="0" y="204" font-family="Inter, Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="4.2" fill="#f9a8d4">STOP SCROLLING. START WATCHING.</text>
+    <text x="0" y="306" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="500" fill="#e5e8f2">Movies you both want to watch,</text>
+    <text x="0" y="364" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="500" fill="#e5e8f2">with ratings and where to stream.</text>
+    <text x="0" y="458" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="500" fill="#9ca3af">matchboxd.com</text>
   </g>
 </svg>
