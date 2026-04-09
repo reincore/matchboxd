@@ -4,20 +4,40 @@
       <stop offset="0" stop-color="#131620"/>
       <stop offset="1" stop-color="#08090c"/>
     </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="match-glow" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="#f9a8d4" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#ec4899" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
+  <!-- App icon background -->
   <rect width="64" height="64" rx="14" fill="url(#bg)"/>
 
-  <!-- Left circle — User A -->
-  <circle cx="22" cy="32" r="14" fill="#ec4899" fill-opacity="0.52"/>
+  <!-- Subtle pink glow behind the venn -->
+  <ellipse cx="32" cy="32" rx="26" ry="20" fill="url(#glow)"/>
 
-  <!-- Right circle — User B -->
-  <circle cx="42" cy="32" r="14" fill="#ec4899" fill-opacity="0.26"/>
+  <!-- Film frame -->
+  <rect x="10" y="18" width="44" height="28" rx="4"
+        fill="none" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.60"/>
+
+  <!-- Warm glow at the intersection -->
+  <ellipse cx="32" cy="32" rx="10" ry="8" fill="url(#match-glow)"/>
+
+  <!-- Left circle — User A -->
+  <circle cx="26" cy="32" r="8" fill="#ec4899" fill-opacity="0.50"/>
+
+  <!-- Right circle — User B (boosted for smoother blend) -->
+  <circle cx="38" cy="32" r="8" fill="#ec4899" fill-opacity="0.32"/>
 
   <!--
-    Intersection lens: cx1=22, cx2=42, r=14, d=20.
-    x=32, y=±√(196−100)=±√96≈±9.80 → 22.20 and 41.80.
+    Intersection lens: cx1=26, cx2=38, r=8, d=12.
+    x=32, y=±√(64−36)=±√28≈±5.29 → 26.71 and 37.29.
   -->
-  <path d="M 32 22.20 A 14 14 0 0 1 32 41.80 A 14 14 0 0 1 32 22.20 Z"
-        fill="#ec4899" fill-opacity="0.84"/>
+  <path d="M 32 26.71 A 8 8 0 0 1 32 37.29 A 8 8 0 0 1 32 26.71 Z"
+        fill="#ec4899" fill-opacity="0.70"/>
 </svg>

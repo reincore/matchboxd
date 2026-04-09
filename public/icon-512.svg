@@ -4,13 +4,40 @@
       <stop offset="0" stop-color="#131620"/>
       <stop offset="1" stop-color="#08090c"/>
     </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="match-glow" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="#f9a8d4" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#ec4899" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
+  <!-- Background -->
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
 
-  <circle cx="176" cy="256" r="112" fill="#ec4899" fill-opacity="0.52"/>
-  <circle cx="336" cy="256" r="112" fill="#ec4899" fill-opacity="0.26"/>
+  <!-- Glow -->
+  <ellipse cx="256" cy="256" rx="208" ry="160" fill="url(#glow)"/>
 
-  <path d="M 256 177.62 A 112 112 0 0 1 256 334.38 A 112 112 0 0 1 256 177.62 Z"
-        fill="#ec4899" fill-opacity="0.84"/>
+  <!-- Film frame (scale ×8) -->
+  <rect x="80" y="144" width="352" height="224" rx="32"
+        fill="none" stroke="#ec4899" stroke-width="12" stroke-opacity="0.60"/>
+
+  <!-- Warm glow at the intersection -->
+  <ellipse cx="256" cy="256" rx="80" ry="64" fill="url(#match-glow)"/>
+
+  <!-- Left circle -->
+  <circle cx="208" cy="256" r="64" fill="#ec4899" fill-opacity="0.50"/>
+
+  <!-- Right circle -->
+  <circle cx="304" cy="256" r="64" fill="#ec4899" fill-opacity="0.32"/>
+
+  <!--
+    Intersection: cx1=208, cx2=304, r=64, d=96.
+    x=256, y=±√(4096−2304)=±√1792≈±42.33 → 213.67 and 298.33.
+  -->
+  <path d="M 256 213.67 A 64 64 0 0 1 256 298.33 A 64 64 0 0 1 256 213.67 Z"
+        fill="#ec4899" fill-opacity="0.70"/>
 </svg>
