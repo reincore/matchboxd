@@ -59,7 +59,7 @@ export function Header({ onRestart, step, className }: HeaderProps) {
 
 function Logo() {
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent/40 bg-accent/15 sm:h-9 sm:w-9 lg:h-12 lg:w-12 lg:rounded-xl">
+    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent/30 bg-ink-800 sm:h-9 sm:w-9 lg:h-12 lg:w-12 lg:rounded-xl">
       <svg
         width="18"
         height="18"
