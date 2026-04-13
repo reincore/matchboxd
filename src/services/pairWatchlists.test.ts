@@ -114,9 +114,18 @@ describe('pairWatchlists', () => {
     );
     scrapeWatchlistMock.mockResolvedValueOnce(['shared-film']);
 
-    await expect(pairWatchlists('l', 'o')).rejects.toMatchObject({
+    await expect(pairWatchlists('nouser', 'other')).rejects.toMatchObject({
       name: 'PairWatchlistError',
-      message: "Couldn't find @l on Letterboxd. Check the username and try again.",
+      message: "Couldn't find @nouser on Letterboxd. Check the username and try again.",
     });
+  });
+
+  it('rejects invalid username format before any scraping', async () => {
+    await expect(pairWatchlists('a', 'bob')).rejects.toMatchObject({
+      name: 'PairWatchlistError',
+      message: expect.stringMatching(/at least 2/),
+    });
+    // scrapeWatchlist should never have been called
+    expect(scrapeWatchlistMock).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@ import {
   upscalePoster,
   type LetterboxdFilmDetails,
 } from './letterboxdScrape';
+import { validateLetterboxdUsername } from '../utils/slug';
 
 export type ItemSource = 'both' | 'userA' | 'userB';
 
@@ -179,9 +180,10 @@ export async function pairWatchlists(
 
   const cleanA = userA.trim().replace(/^@/, '').toLowerCase();
   const cleanB = userB.trim().replace(/^@/, '').toLowerCase();
-  if (!cleanA || !cleanB) {
-    throw new PairWatchlistError('Both usernames are required.');
-  }
+  const errA = validateLetterboxdUsername(cleanA);
+  if (errA) throw new PairWatchlistError(errA);
+  const errB = validateLetterboxdUsername(cleanB);
+  if (errB) throw new PairWatchlistError(errB);
   if (cleanA === cleanB) {
     throw new PairWatchlistError(
       "Those usernames are identical — enter both people's Letterboxd handles.",

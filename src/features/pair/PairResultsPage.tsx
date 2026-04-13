@@ -69,11 +69,16 @@ export function PairResultsPage() {
       if (sourceFilter === 'both' && item.source !== 'both') return false;
       if (sourceFilter === 'userA' && item.source !== 'userA') return false;
       if (sourceFilter === 'userB' && item.source !== 'userB') return false;
+      if (mood !== 'all' && mood !== 'recent' && !item.enriched && item.genres.length === 0) {
+        // Stubs haven't loaded genres yet — keep them visible during enrichment
+        // so the grid doesn't flash empty while details stream in.
+        return true;
+      }
       switch (mood) {
         case 'horror':
           return hasGenre(item, /horror/i);
         case 'romcom':
-          return hasGenre(item, /romance/i) || hasGenre(item, /comedy/i);
+          return hasGenre(item, /romance/i) && hasGenre(item, /comedy/i);
         case 'drama':
           return hasGenre(item, /drama/i);
         case 'comedy':

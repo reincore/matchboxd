@@ -156,7 +156,7 @@ function parseRssItem(item: Rss2JsonItem): LetterboxdEntry | null {
     const rewatch = Boolean(match[4]);
     const rating = stars ? starsToRating(stars) : undefined;
     return {
-      kind: rating !== undefined ? 'watched' : 'watched',
+      kind: 'watched',
       title,
       year: Number.isFinite(year) ? year : undefined,
       rating,

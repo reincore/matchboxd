@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
 import { StepShell } from '../../components/StepShell';
+import { validateLetterboxdUsername } from '../../utils/slug';
 
 export function LandingPage() {
   const { userA: savedA, userB: savedB, setUsernames, setStep } = useSession();
@@ -16,8 +17,14 @@ export function LandingPage() {
   const submit = () => {
     const a = userA.trim().replace(/^@/, '');
     const b = userB.trim().replace(/^@/, '');
-    if (!a || !b) {
-      setError('Both usernames are required.');
+    const errA = validateLetterboxdUsername(a);
+    if (errA) {
+      setError(errA);
+      return;
+    }
+    const errB = validateLetterboxdUsername(b);
+    if (errB) {
+      setError(errB);
       return;
     }
     if (a.toLowerCase() === b.toLowerCase()) {
