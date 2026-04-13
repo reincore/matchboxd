@@ -67,8 +67,8 @@ export function PairResultsPage() {
       if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
       if (highRatedOnly && (item.lbRating ?? 0) < 4) return false;
       if (sourceFilter === 'both' && item.source !== 'both') return false;
-      if (sourceFilter === 'userA' && item.source !== 'userA') return false;
-      if (sourceFilter === 'userB' && item.source !== 'userB') return false;
+      if (sourceFilter === 'userA' && item.source === 'userB') return false;
+      if (sourceFilter === 'userB' && item.source === 'userA') return false;
       if (mood !== 'all' && mood !== 'recent' && !item.enriched && item.genres.length === 0) {
         // Stubs haven't loaded genres yet — keep them visible during enrichment
         // so the grid doesn't flash empty while details stream in.
@@ -416,7 +416,7 @@ function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: strin
           {typeof item.runtime === 'number' && (
             <MetaPill>{item.runtime} min</MetaPill>
           )}
-          {item.genres.slice(0, 2).map((g) => (
+          {item.genres.map((g) => (
             <MetaPill key={g} muted>
               {g}
             </MetaPill>

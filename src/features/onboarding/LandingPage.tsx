@@ -66,14 +66,14 @@ export function LandingPage() {
               label="Your Letterboxd username"
               value={userA}
               onChange={setUserA}
-              placeholder="e.g. deniz"
+              placeholder="e.g. DenizSaglam"
               autoFocus
             />
             <UsernameField
               label="Their Letterboxd username"
               value={userB}
               onChange={setUserB}
-              placeholder="e.g. ada"
+              placeholder="e.g. Perzona"
             />
 
             {error && (

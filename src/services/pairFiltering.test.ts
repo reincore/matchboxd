@@ -37,8 +37,8 @@ function filterItems(
     if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
     if (highRatedOnly && (item.lbRating ?? 0) < 4) return false;
     if (sourceFilter === 'both' && item.source !== 'both') return false;
-    if (sourceFilter === 'userA' && item.source !== 'userA') return false;
-    if (sourceFilter === 'userB' && item.source !== 'userB') return false;
+    if (sourceFilter === 'userA' && item.source === 'userB') return false;
+    if (sourceFilter === 'userB' && item.source === 'userA') return false;
     // Unenriched stubs with no genres should pass through during enrichment
     if (mood !== 'all' && mood !== 'recent' && !item.enriched && item.genres.length === 0) {
       return true;
@@ -194,8 +194,9 @@ describe('source filter', () => {
     const b = makeItem({ slug: 'b', source: 'userB' });
 
     expect(filterItems([both, a, b], { mood: 'all', sourceFilter: 'both' }).map((i) => i.slug)).toEqual(['both']);
-    expect(filterItems([both, a, b], { mood: 'all', sourceFilter: 'userA' }).map((i) => i.slug)).toEqual(['a']);
-    expect(filterItems([both, a, b], { mood: 'all', sourceFilter: 'userB' }).map((i) => i.slug)).toEqual(['b']);
+    // Selecting a user shows their exclusives AND shared films
+    expect(filterItems([both, a, b], { mood: 'all', sourceFilter: 'userA' }).map((i) => i.slug)).toEqual(['both', 'a']);
+    expect(filterItems([both, a, b], { mood: 'all', sourceFilter: 'userB' }).map((i) => i.slug)).toEqual(['both', 'b']);
     expect(filterItems([both, a, b], { mood: 'all', sourceFilter: 'all' })).toHaveLength(3);
   });
 });
