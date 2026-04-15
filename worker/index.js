@@ -14,6 +14,8 @@ const ALLOWED_TARGET = /^https:\/\/(www\.)?letterboxd\.com\//;
 export default {
   async fetch(request) {
     const origin = request.headers.get('Origin') || '';
+    const ipCountry = request.headers.get('cf-ipcountry') || '';
+
     if (origin && !ALLOWED_ORIGINS.test(origin)) {
       return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
         status: 403,
@@ -23,18 +25,21 @@ export default {
 
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(request) });
+      return new Response(null, {
+        status: 204,
+        headers: { ...corsHeaders(request), 'X-Client-Country': ipCountry },
+      });
     }
 
     const { searchParams } = new URL(request.url);
     const target = searchParams.get('url');
 
     if (!target) {
-      return json({ error: 'Missing ?url= parameter' }, 400, request);
+      return json({ error: 'Missing ?url= parameter' }, 400, request, ipCountry);
     }
 
     if (!ALLOWED_TARGET.test(target)) {
-      return json({ error: 'Only letterboxd.com URLs are allowed' }, 403, request);
+      return json({ error: 'Only letterboxd.com URLs are allowed' }, 403, request, ipCountry);
     }
 
     try {
@@ -56,10 +61,11 @@ export default {
           ...corsHeaders(request),
           'Content-Type': res.headers.get('Content-Type') || 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=300', // 5 min edge cache
+          'X-Client-Country': ipCountry,
         },
       });
     } catch (err) {
-      return json({ error: 'Upstream fetch failed', detail: String(err) }, 502, request);
+      return json({ error: 'Upstream fetch failed', detail: String(err) }, 502, request, ipCountry);
     }
   },
 };
@@ -73,16 +79,18 @@ function corsHeaders(request) {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Expose-Headers': 'X-Client-Country',
     'Access-Control-Max-Age': '86400',
   };
 }
 
-function json(data, status, request) {
+function json(data, status, request, ipCountry = '') {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       ...corsHeaders(request),
       'Content-Type': 'application/json',
+      'X-Client-Country': ipCountry,
     },
   });
 }

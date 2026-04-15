@@ -9,6 +9,7 @@
 // These are all publicly accessible and Letterboxd serves them to anonymous
 // visitors. The only reason we need a proxy is browser CORS.
 
+import { setCountryFromHeader } from './countryDetection';
 import { RSS_ADAPTER, RSS_BASE_URL } from '../utils/env';
 
 const LETTERBOXD_BASE = 'https://letterboxd.com';
@@ -256,6 +257,9 @@ async function fetchHtml(targetUrl: string, timeoutMs = FETCH_TIMEOUT_MS): Promi
               await delay(1200);
             }
             continue;
+          }
+          if (proxy.name === 'cfworker') {
+            setCountryFromHeader(res);
           }
           const text = await res.text();
           if (text.length < 500 || looksRateLimited(text) || !looksLikeLetterboxd(text)) {

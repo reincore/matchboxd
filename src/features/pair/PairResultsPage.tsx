@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from '../../app/SessionContext';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
@@ -6,6 +6,12 @@ import { Poster } from '../../components/Poster';
 import { StepShell } from '../../components/StepShell';
 import { Button } from '../../components/Button';
 import type { PairWatchlistItem, ItemSource } from '../../services/pairWatchlists';
+import {
+  buildJustWatchSearchUrl,
+  getDetectedCountry,
+  getCountryOverride,
+  setCountryOverride,
+} from '../../services/countryDetection';
 import { cn } from '../../utils/cn';
 
 type MoodFilter =
@@ -59,6 +65,11 @@ export function PairResultsPage() {
   const [underOneHundred, setUnderOneHundred] = useState(false);
   const [highRatedOnly, setHighRatedOnly] = useState(false);
   const [sort, setSort] = useState<SortOption>('rating');
+  const [jwCountry, setJwCountry] = useState(getDetectedCountry);
+  const handleCountryChange = useCallback((code: string | null) => {
+    setCountryOverride(code);
+    setJwCountry(getDetectedCountry());
+  }, []);
 
   // Use streaming items while enriching; final pairResult items when done.
   const items = pairResult ? pairResult.items : streamingItems;
@@ -186,7 +197,7 @@ export function PairResultsPage() {
             <>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-5 mt-6">
                 {filtered.map((item) => (
-                  <FilmRow key={item.slug} item={item} userA={userA} userB={userB} />
+                  <FilmRow key={item.slug} item={item} userA={userA} userB={userB} jwCountry={jwCountry} onCountryChange={handleCountryChange} />
                 ))}
               </ul>
               {isEnriching && (
@@ -374,7 +385,17 @@ function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: stri
   );
 }
 
-function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: string; userB: string }) {
+function FilmRow({
+  item, userA, userB, jwCountry, onCountryChange,
+}: {
+  item: PairWatchlistItem;
+  userA: string;
+  userB: string;
+  jwCountry: string;
+  onCountryChange: (code: string | null) => void;
+}) {
+  const jwUrl = buildJustWatchSearchUrl(item.title, item.year);
+
   return (
     <li className={cn(
       'surface-card overflow-hidden flex gap-3 xl:gap-4 p-3 xl:p-4 transition-opacity',
@@ -430,17 +451,86 @@ function FilmRow({ item, userA, userB }: { item: PairWatchlistItem; userA: strin
 
         <div className="mt-auto pt-2 flex flex-wrap gap-2 items-center">
           <a
-            href={item.justwatchUrl}
+            href={jwUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[12px] xl:text-[13px] font-medium text-accent-soft hover:text-accent transition-colors inline-flex items-center gap-1 focus-ring rounded"
           >
-            Search JustWatch (TR)
+            Search JustWatch
             <ArrowIcon />
           </a>
+          <CountryPicker country={jwCountry} onChange={onCountryChange} />
         </div>
       </div>
     </li>
+  );
+}
+
+const COUNTRY_PICKER_OPTIONS: { code: string; label: string }[] = [
+  { code: 'us', label: 'US' }, { code: 'gb', label: 'UK' }, { code: 'tr', label: 'Turkey' },
+  { code: 'de', label: 'Germany' }, { code: 'fr', label: 'France' }, { code: 'es', label: 'Spain' },
+  { code: 'it', label: 'Italy' }, { code: 'nl', label: 'Netherlands' }, { code: 'pl', label: 'Poland' },
+  { code: 'pt', label: 'Portugal' }, { code: 'br', label: 'Brazil' }, { code: 'ca', label: 'Canada' },
+  { code: 'au', label: 'Australia' }, { code: 'in', label: 'India' }, { code: 'jp', label: 'Japan' },
+  { code: 'kr', label: 'South Korea' }, { code: 'se', label: 'Sweden' }, { code: 'no', label: 'Norway' },
+  { code: 'dk', label: 'Denmark' }, { code: 'fi', label: 'Finland' }, { code: 'at', label: 'Austria' },
+  { code: 'ch', label: 'Switzerland' }, { code: 'be', label: 'Belgium' }, { code: 'ie', label: 'Ireland' },
+  { code: 'mx', label: 'Mexico' }, { code: 'ar', label: 'Argentina' }, { code: 'co', label: 'Colombia' },
+  { code: 'ee', label: 'Estonia' }, { code: 'lv', label: 'Latvia' }, { code: 'lt', label: 'Lithuania' },
+];
+
+function CountryPicker({ country, onChange }: { country: string; onChange: (code: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const hasOverride = getCountryOverride() !== null;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] xl:text-[12px] text-ink-400 hover:text-ink-200 transition-colors cursor-pointer uppercase tracking-wider focus-ring rounded px-1"
+        title="Change JustWatch country"
+      >
+        {country.toUpperCase()}
+      </button>
+      {open && (
+        <div className="absolute bottom-full mb-1 right-0 z-50 surface-card border border-ink-700 rounded-lg shadow-xl py-1 max-h-52 overflow-y-auto w-40">
+          {hasOverride && (
+            <button
+              type="button"
+              className="w-full text-left px-3 py-1.5 text-[12px] text-accent-soft hover:bg-ink-800 transition-colors border-b border-ink-700"
+              onClick={() => { onChange(null); setOpen(false); }}
+            >
+              Auto-detect
+            </button>
+          )}
+          {COUNTRY_PICKER_OPTIONS.map((opt) => (
+            <button
+              key={opt.code}
+              type="button"
+              className={cn(
+                'w-full text-left px-3 py-1.5 text-[12px] hover:bg-ink-800 transition-colors',
+                opt.code === country ? 'text-accent-soft font-medium' : 'text-ink-200',
+              )}
+              onClick={() => { onChange(opt.code); setOpen(false); }}
+            >
+              <span className="uppercase text-ink-400 mr-1.5">{opt.code}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

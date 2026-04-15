@@ -16,6 +16,7 @@ import {
   upscalePoster,
   type LetterboxdFilmDetails,
 } from './letterboxdScrape';
+import { buildJustWatchSearchUrl } from './countryDetection';
 import { validateLetterboxdUsername } from '../utils/slug';
 
 export type ItemSource = 'both' | 'userA' | 'userB';
@@ -87,34 +88,6 @@ async function runWithConcurrency<T, R>(
   });
   await Promise.all(workers);
   return results;
-}
-
-/** Detect JustWatch country code from browser locale. Falls back to 'us'. */
-function getJustWatchCountry(): string {
-  if (typeof navigator === 'undefined') return 'us';
-  const lang = (navigator.language ?? '').toLowerCase();
-  const parts = lang.split('-');
-  if (parts.length > 1) return parts[1];
-  // Language-only codes where the language maps directly to a country
-  const langToCountry: Record<string, string> = {
-    tr: 'tr', de: 'de', fr: 'fr', es: 'es', it: 'it', pt: 'pt',
-    nl: 'nl', pl: 'pl', ja: 'jp', ko: 'kr',
-  };
-  return langToCountry[parts[0]] ?? 'us';
-}
-
-const JUSTWATCH_SEARCH_PATHS: Record<string, string> = {
-  tr: 'arama', de: 'Suche', fr: 'recherche', es: 'buscar',
-  it: 'cerca', pt: 'busca', nl: 'zoeken', pl: 'szukaj',
-};
-
-function buildJustWatchSearchUrl(title: string, year?: number) {
-  const country = getJustWatchCountry();
-  const searchPath = JUSTWATCH_SEARCH_PATHS[country] ?? 'search';
-  const query = [title, year ? String(year) : '']
-    .filter(Boolean)
-    .join(' ');
-  return `https://www.justwatch.com/${country}/${searchPath}?q=${encodeURIComponent(query)}`;
 }
 
 /** Build a stub PairWatchlistItem from list-page metadata (no detail scrape). */

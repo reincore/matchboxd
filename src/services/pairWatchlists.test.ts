@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('./countryDetection', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./countryDetection')>();
+  return {
+    ...actual,
+    getDetectedCountry: () => 'us',
+    buildJustWatchSearchUrl: (title: string, year?: number) => {
+      const query = [title, year ? String(year) : ''].filter(Boolean).join(' ');
+      return `https://www.justwatch.com/us/search?q=${encodeURIComponent(query)}`;
+    },
+  };
+});
+
 vi.mock('./letterboxdScrape', () => {
   class LetterboxdScrapeError extends Error {
     code: 'not-found' | 'private' | 'unknown';
