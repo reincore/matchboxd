@@ -70,6 +70,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
   const pairingRunIdRef = useRef(0);
   const hydratedRef = useRef(false);
+  const pendingItemsRef = useRef<PairWatchlistItem[]>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     // Pair loading/results depend on in-memory data that is not restored after
@@ -114,23 +116,44 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const flushPendingItems = useCallback(() => {
+    const batch = pendingItemsRef.current;
+    if (batch.length === 0) return;
+    pendingItemsRef.current = [];
+    setStreamingItems((prev) => {
+      const next = [...prev];
+      for (const item of batch) {
+        const idx = next.findIndex((s) => s.slug === item.slug);
+        if (idx === -1) next.push(item);
+        else next[idx] = item;
+      }
+      return next;
+    });
+  }, []);
+
   const updateStreamingItem = useCallback(
     (runId: number, item: PairWatchlistItem) => {
       if (runId !== pairingRunIdRef.current) return;
-      setStreamingItems((prev) => {
-        const idx = prev.findIndex((s) => s.slug === item.slug);
-        if (idx === -1) return [...prev, item];
-        const next = [...prev];
-        next[idx] = item;
-        return next;
-      });
+      pendingItemsRef.current.push(item);
+      if (!flushTimerRef.current) {
+        flushTimerRef.current = setTimeout(() => {
+          flushTimerRef.current = undefined;
+          flushPendingItems();
+        }, 500);
+      }
     },
-    [],
+    [flushPendingItems],
   );
 
   const finalizeEnrichment = useCallback(
     (runId: number, result: PairWatchlistResult) => {
       if (runId !== pairingRunIdRef.current) return;
+      // Flush any pending batched items before finalizing
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = undefined;
+      }
+      pendingItemsRef.current = [];
       setPairResult(result);
       setIsEnriching(false);
       // Keep streamingItems in sync with final result

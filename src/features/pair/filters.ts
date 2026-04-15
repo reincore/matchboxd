@@ -47,17 +47,18 @@ export function sortItems(items: PairWatchlistItem[], sort: SortOption): PairWat
     case 'rating':
       copy.sort(
         (a, b) => (b.lbRating ?? -1) - (a.lbRating ?? -1) ||
-          (b.lbRatingCount ?? 0) - (a.lbRatingCount ?? 0),
+          (b.lbRatingCount ?? 0) - (a.lbRatingCount ?? 0) ||
+          a.slug.localeCompare(b.slug),
       );
       break;
     case 'year-desc':
-      copy.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+      copy.sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || a.slug.localeCompare(b.slug));
       break;
     case 'runtime-asc':
-      copy.sort((a, b) => (a.runtime ?? 9999) - (b.runtime ?? 9999));
+      copy.sort((a, b) => (a.runtime ?? 9999) - (b.runtime ?? 9999) || a.slug.localeCompare(b.slug));
       break;
     case 'title':
-      copy.sort((a, b) => a.title.localeCompare(b.title));
+      copy.sort((a, b) => a.title.localeCompare(b.title) || a.slug.localeCompare(b.slug));
       break;
   }
   return copy;

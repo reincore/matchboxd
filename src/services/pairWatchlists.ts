@@ -17,7 +17,7 @@ import {
   type LetterboxdFilmDetails,
 } from './letterboxdScrape';
 import { buildJustWatchSearchUrl } from './countryDetection';
-import { validateLetterboxdUsername } from '../utils/slug';
+import { slugToTitle, validateLetterboxdUsername } from '../utils/slug';
 
 export type ItemSource = 'both' | 'userA' | 'userB';
 
@@ -94,14 +94,14 @@ function buildStub(slug: string, source: ItemSource): PairWatchlistItem {
   const meta = getListPageMeta(slug);
   return {
     slug,
-    title: meta?.title ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    title: meta?.title ?? slugToTitle(slug),
     year: meta?.year,
     posterUrl: meta?.posterUrl,
     genres: [],
     directors: [],
     letterboxdUrl: `https://letterboxd.com/film/${slug}/`,
     justwatchUrl: buildJustWatchSearchUrl(
-      meta?.title ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      meta?.title ?? slugToTitle(slug),
       meta?.year,
     ),
     source,

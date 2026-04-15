@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { validateLetterboxdUsername } from './slug';
+import { slugToTitle, validateLetterboxdUsername } from './slug';
+
+describe('slugToTitle', () => {
+  it('converts hyphenated slugs to title case', () => {
+    expect(slugToTitle('the-dark-knight')).toBe('The Dark Knight');
+  });
+
+  it('handles single-word slugs', () => {
+    expect(slugToTitle('inception')).toBe('Inception');
+  });
+
+  it('handles already-uppercase characters', () => {
+    expect(slugToTitle('wall-e')).toBe('Wall E');
+  });
+});
 
 describe('validateLetterboxdUsername', () => {
   it('accepts valid usernames', () => {

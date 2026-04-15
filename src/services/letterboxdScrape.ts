@@ -11,6 +11,7 @@
 
 import { setCountryFromHeader } from './countryDetection';
 import { RSS_ADAPTER, RSS_BASE_URL } from '../utils/env';
+import { slugToTitle } from '../utils/slug';
 
 const LETTERBOXD_BASE = 'https://letterboxd.com';
 const POSTER_WIDTH = 460;
@@ -558,7 +559,7 @@ export async function scrapeFilm(slug: string): Promise<LetterboxdFilmDetails> {
     const meta = LIST_PAGE_META.get(normalized);
     const stub: LetterboxdFilmDetails = {
       slug: normalized,
-      title: meta?.title ?? normalized.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      title: meta?.title ?? slugToTitle(normalized),
       year: meta?.year,
       posterUrl: meta?.posterUrl,
       genres: [],

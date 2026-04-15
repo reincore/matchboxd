@@ -124,7 +124,7 @@ export function PairResultsPage() {
                   watchlist entries.
                   {isEnriching && (
                     <span className="text-accent-soft ml-1">
-                      Loading details…
+                      Loading details ({items.filter(i => i.enriched).length}/{items.length})…
                     </span>
                   )}
                 </>
@@ -184,7 +184,7 @@ export function PairResultsPage() {
               {isEnriching && (
                 <div className="flex items-center justify-center gap-2 py-6 text-ink-400 text-sm">
                   <MiniSpinner />
-                  Loading more details…
+                  Loading details… {items.filter(i => i.enriched).length} of {items.length}
                 </div>
               )}
             </>

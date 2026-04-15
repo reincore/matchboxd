@@ -1,3 +1,8 @@
+/** Convert a Letterboxd slug like "the-dark-knight" to "The Dark Knight". */
+export function slugToTitle(slug: string): string {
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /**
  * Letterboxd usernames: 2-15 chars, letters/digits/hyphens/underscores only.
  * Returns null if valid, or an error message string if invalid.

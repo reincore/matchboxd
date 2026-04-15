@@ -132,18 +132,17 @@ function stageLabel(stage: PairWatchlistProgress['stage']): string {
 }
 
 function computeProgress(p: PairWatchlistProgress): number {
+  // The loading page unmounts as soon as stubs are ready (before the
+  // "details" enrichment phase), so the watchlist stage is the only
+  // network-bound phase the user actually sees here.
   switch (p.stage) {
     case 'watchlists': {
       if (!p.pageTotal || !p.pageLoaded) return 0;
-      return Math.round(50 * (p.pageLoaded / p.pageTotal));
+      return Math.round(95 * (p.pageLoaded / p.pageTotal));
     }
     case 'intersection':
-      return 50;
-    case 'details': {
-      if (!p.detailsTotal) return 50;
-      const ratio = (p.detailsLoaded ?? 0) / p.detailsTotal;
-      return Math.round(50 + 50 * ratio);
-    }
+      return 97;
+    case 'details':
     case 'done':
       return 100;
   }
