@@ -11,6 +11,7 @@ import {
   getDetectedCountry,
   getCountryOverride,
   setCountryOverride,
+  JUSTWATCH_COUNTRY_LIST,
 } from '../../services/countryDetection';
 import { cn } from '../../utils/cn';
 
@@ -466,22 +467,10 @@ function FilmRow({
   );
 }
 
-const COUNTRY_PICKER_OPTIONS: { code: string; label: string }[] = [
-  { code: 'us', label: 'US' }, { code: 'gb', label: 'UK' }, { code: 'tr', label: 'Turkey' },
-  { code: 'de', label: 'Germany' }, { code: 'fr', label: 'France' }, { code: 'es', label: 'Spain' },
-  { code: 'it', label: 'Italy' }, { code: 'nl', label: 'Netherlands' }, { code: 'pl', label: 'Poland' },
-  { code: 'pt', label: 'Portugal' }, { code: 'br', label: 'Brazil' }, { code: 'ca', label: 'Canada' },
-  { code: 'au', label: 'Australia' }, { code: 'in', label: 'India' }, { code: 'jp', label: 'Japan' },
-  { code: 'kr', label: 'South Korea' }, { code: 'se', label: 'Sweden' }, { code: 'no', label: 'Norway' },
-  { code: 'dk', label: 'Denmark' }, { code: 'fi', label: 'Finland' }, { code: 'at', label: 'Austria' },
-  { code: 'ch', label: 'Switzerland' }, { code: 'be', label: 'Belgium' }, { code: 'ie', label: 'Ireland' },
-  { code: 'mx', label: 'Mexico' }, { code: 'ar', label: 'Argentina' }, { code: 'co', label: 'Colombia' },
-  { code: 'ee', label: 'Estonia' }, { code: 'lv', label: 'Latvia' }, { code: 'lt', label: 'Lithuania' },
-];
-
 function CountryPicker({ country, onChange }: { country: string; onChange: (code: string | null) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const hasOverride = getCountryOverride() !== null;
 
   useEffect(() => {
@@ -491,6 +480,13 @@ function CountryPicker({ country, onChange }: { country: string; onChange: (code
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  // Scroll the active country into view when the dropdown opens.
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+    const active = listRef.current.querySelector('[data-active]');
+    if (active) active.scrollIntoView({ block: 'center' });
   }, [open]);
 
   return (
@@ -504,7 +500,7 @@ function CountryPicker({ country, onChange }: { country: string; onChange: (code
         {country.toUpperCase()}
       </button>
       {open && (
-        <div className="absolute bottom-full mb-1 right-0 z-50 surface-card border border-ink-700 rounded-lg shadow-xl py-1 max-h-52 overflow-y-auto w-40">
+        <div ref={listRef} className="absolute bottom-full mb-1 right-0 z-50 surface-card border border-ink-700 rounded-lg shadow-xl py-1 max-h-64 overflow-y-auto w-44">
           {hasOverride && (
             <button
               type="button"
@@ -514,10 +510,11 @@ function CountryPicker({ country, onChange }: { country: string; onChange: (code
               Auto-detect
             </button>
           )}
-          {COUNTRY_PICKER_OPTIONS.map((opt) => (
+          {JUSTWATCH_COUNTRY_LIST.map((opt) => (
             <button
               key={opt.code}
               type="button"
+              {...(opt.code === country ? { 'data-active': '' } : {})}
               className={cn(
                 'w-full text-left px-3 py-1.5 text-[12px] hover:bg-ink-800 transition-colors',
                 opt.code === country ? 'text-accent-soft font-medium' : 'text-ink-200',
@@ -525,7 +522,7 @@ function CountryPicker({ country, onChange }: { country: string; onChange: (code
               onClick={() => { onChange(opt.code); setOpen(false); }}
             >
               <span className="uppercase text-ink-400 mr-1.5">{opt.code}</span>
-              {opt.label}
+              {opt.name}
             </button>
           ))}
         </div>

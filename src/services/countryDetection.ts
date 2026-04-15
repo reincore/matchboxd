@@ -29,6 +29,47 @@ export const JUSTWATCH_COUNTRIES = new Set([
   'za', 'zm', 'zw',
 ]);
 
+/** Human-readable names for every JustWatch-supported country. */
+export const JUSTWATCH_COUNTRY_NAMES: Record<string, string> = {
+  ad: 'Andorra', ae: 'UAE', ag: 'Antigua & Barbuda', al: 'Albania',
+  ar: 'Argentina', at: 'Austria', au: 'Australia', ba: 'Bosnia & Herzegovina',
+  bb: 'Barbados', be: 'Belgium', bg: 'Bulgaria', bh: 'Bahrain',
+  bm: 'Bermuda', bo: 'Bolivia', br: 'Brazil', bs: 'Bahamas',
+  ca: 'Canada', ch: 'Switzerland', ci: "Ivory Coast", cl: 'Chile',
+  co: 'Colombia', cr: 'Costa Rica', cu: 'Cuba', cv: 'Cape Verde',
+  cz: 'Czechia', de: 'Germany', dk: 'Denmark', do: 'Dominican Republic',
+  dz: 'Algeria', ec: 'Ecuador', ee: 'Estonia', eg: 'Egypt',
+  es: 'Spain', fi: 'Finland', fj: 'Fiji', fr: 'France',
+  gb: 'United Kingdom', gf: 'French Guiana', gh: 'Ghana', gi: 'Gibraltar',
+  gq: 'Equatorial Guinea', gr: 'Greece', gt: 'Guatemala', gy: 'Guyana',
+  hk: 'Hong Kong', hn: 'Honduras', hr: 'Croatia', hu: 'Hungary',
+  id: 'Indonesia', ie: 'Ireland', il: 'Israel', in: 'India',
+  iq: 'Iraq', is: 'Iceland', it: 'Italy', jm: 'Jamaica',
+  jo: 'Jordan', jp: 'Japan', ke: 'Kenya', kr: 'South Korea',
+  kw: 'Kuwait', lb: 'Lebanon', li: 'Liechtenstein', lt: 'Lithuania',
+  lv: 'Latvia', ly: 'Libya', ma: 'Morocco', mc: 'Monaco',
+  md: 'Moldova', me: 'Montenegro', mk: 'North Macedonia', ml: 'Mali',
+  mt: 'Malta', mu: 'Mauritius', mx: 'Mexico', my: 'Malaysia',
+  mz: 'Mozambique', ne: 'Niger', ng: 'Nigeria', ni: 'Nicaragua',
+  nl: 'Netherlands', no: 'Norway', nz: 'New Zealand', om: 'Oman',
+  pa: 'Panama', pe: 'Peru', pf: 'French Polynesia', pg: 'Papua New Guinea',
+  ph: 'Philippines', pk: 'Pakistan', pl: 'Poland', ps: 'Palestine',
+  pt: 'Portugal', py: 'Paraguay', qa: 'Qatar', ro: 'Romania',
+  rs: 'Serbia', ru: 'Russia', sa: 'Saudi Arabia', sc: 'Seychelles',
+  se: 'Sweden', sg: 'Singapore', si: 'Slovenia', sk: 'Slovakia',
+  sm: 'San Marino', sn: 'Senegal', sv: 'El Salvador', tc: 'Turks & Caicos',
+  th: 'Thailand', tn: 'Tunisia', tr: 'Turkey', tt: 'Trinidad & Tobago',
+  tw: 'Taiwan', tz: 'Tanzania', ua: 'Ukraine', ug: 'Uganda',
+  us: 'United States', uy: 'Uruguay', ve: 'Venezuela', xk: 'Kosovo',
+  za: 'South Africa', zm: 'Zambia', zw: 'Zimbabwe',
+};
+
+/** All countries sorted alphabetically by name, for UI pickers. */
+export const JUSTWATCH_COUNTRY_LIST: { code: string; name: string }[] =
+  Object.entries(JUSTWATCH_COUNTRY_NAMES)
+    .map(([code, name]) => ({ code, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
 /** Localized JustWatch search paths. Fallback is 'search'. */
 export const JUSTWATCH_SEARCH_PATHS: Record<string, string> = {
   tr: 'arama', de: 'Suche', fr: 'recherche', es: 'buscar',
