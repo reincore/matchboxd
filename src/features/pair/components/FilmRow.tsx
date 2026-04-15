@@ -81,10 +81,7 @@ export const FilmRow = memo(function FilmRow({
   const jwUrl = buildJustWatchSearchUrl(item.title, item.year);
 
   return (
-    <li className={cn(
-      'surface-card flex gap-3 xl:gap-4 p-3 xl:p-4 transition-opacity',
-      !item.enriched && 'opacity-80',
-    )}>
+    <div className="surface-card flex gap-3 xl:gap-4 p-3 xl:p-4">
       <a
         href={item.letterboxdUrl}
         target="_blank"
@@ -146,6 +143,6 @@ export const FilmRow = memo(function FilmRow({
           <CountryPicker country={jwCountry} onChange={onCountryChange} />
         </div>
       </div>
-    </li>
+    </div>
   );
 });

@@ -1,5 +1,5 @@
 // Scrape public Letterboxd pages through a CORS proxy. This gives us posters,
-// ratings, runtime, genres, and directors WITHOUT requiring a TMDB key.
+// ratings, runtime, genres, and directors.
 //
 // Pages we read:
 //   https://letterboxd.com/<user>/watchlist/           (paginated)
@@ -525,7 +525,6 @@ export interface LetterboxdFilmDetails {
   directors: string[];
   lbRating?: number; // 0..5 from aggregateRating
   lbRatingCount?: number;
-  tmdbId?: number;
 }
 
 const MEMORY_CACHE = new Map<string, LetterboxdFilmDetails>();
@@ -617,9 +616,6 @@ function extractFilmDetails(slug: string, html: string): LetterboxdFilmDetails {
   // Genres: scrape from the "genres" tab anchors.
   const genres = parseGenres(doc, ld);
 
-  // TMDB id if Letterboxd links out to it — useful later if a key appears.
-  const tmdbId = parseTmdbId(doc);
-
   return {
     slug,
     title,
@@ -631,7 +627,6 @@ function extractFilmDetails(slug: string, html: string): LetterboxdFilmDetails {
     directors,
     lbRating,
     lbRatingCount,
-    tmdbId,
   };
 }
 
@@ -732,10 +727,3 @@ function parseGenres(doc: Document, ld: Record<string, unknown> | undefined): st
   return Array.from(out);
 }
 
-function parseTmdbId(doc: Document): number | undefined {
-  const link = doc.querySelector('a[href*="themoviedb.org/movie/"]');
-  if (!link) return undefined;
-  const href = link.getAttribute('href') ?? '';
-  const m = href.match(/movie\/(\d+)/);
-  return m ? Number(m[1]) : undefined;
-}

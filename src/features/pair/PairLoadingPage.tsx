@@ -58,10 +58,7 @@ export function PairLoadingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
-  const pct =
-    progress.stage === 'details' && progress.detailsTotal
-      ? Math.round((100 * (progress.detailsLoaded ?? 0)) / progress.detailsTotal)
-      : stageToPercent(progress.stage);
+  const pct = computeProgress(progress);
 
   return (
     <StepShell>
@@ -134,14 +131,19 @@ function stageLabel(stage: PairWatchlistProgress['stage']): string {
   }
 }
 
-function stageToPercent(stage: PairWatchlistProgress['stage']): number {
-  switch (stage) {
-    case 'watchlists':
-      return 30;
+function computeProgress(p: PairWatchlistProgress): number {
+  switch (p.stage) {
+    case 'watchlists': {
+      if (!p.pageTotal || !p.pageLoaded) return 0;
+      return Math.round(50 * (p.pageLoaded / p.pageTotal));
+    }
     case 'intersection':
       return 50;
-    case 'details':
-      return 75;
+    case 'details': {
+      if (!p.detailsTotal) return 50;
+      const ratio = (p.detailsLoaded ?? 0) / p.detailsTotal;
+      return Math.round(50 + 50 * ratio);
+    }
     case 'done':
       return 100;
   }

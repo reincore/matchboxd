@@ -6,7 +6,7 @@
 //   3. Enrich each film with detail page data (poster, rating, runtime, etc.)
 //      and stream updates to the caller via onItem callback.
 //
-// The whole thing is done client-side via a CORS proxy. No TMDB key needed.
+// The whole thing is done client-side via a CORS proxy.
 
 import {
   getListPageMeta,
@@ -32,7 +32,6 @@ export interface PairWatchlistItem {
   directors: string[];
   lbRating?: number;
   lbRatingCount?: number;
-  tmdbId?: number;
   letterboxdUrl: string;
   justwatchUrl: string;
   source: ItemSource;
@@ -122,7 +121,6 @@ function toItem(details: LetterboxdFilmDetails, source: ItemSource): PairWatchli
     directors: details.directors,
     lbRating: details.lbRating,
     lbRatingCount: details.lbRatingCount,
-    tmdbId: details.tmdbId,
     letterboxdUrl: `https://letterboxd.com/film/${details.slug}/`,
     justwatchUrl: buildJustWatchSearchUrl(details.title, details.year),
     source,

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { motion, LayoutGroup } from 'framer-motion';
 import { useSession } from '../../app/SessionContext';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
@@ -161,11 +162,25 @@ export function PairResultsPage() {
             />
           ) : (
             <>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-5 mt-6">
-                {filtered.map((item) => (
-                  <FilmRow key={item.slug} item={item} userA={userA} userB={userB} jwCountry={jwCountry} onCountryChange={handleCountryChange} />
-                ))}
-              </ul>
+              <LayoutGroup>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-5 mt-6">
+                  {filtered.map((item) => (
+                    <motion.li
+                      key={item.slug}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        layout: { duration: 0.3, ease: [0.2, 0.8, 0.2, 1] },
+                        opacity: { duration: 0.25 },
+                        y: { duration: 0.25 },
+                      }}
+                    >
+                      <FilmRow item={item} userA={userA} userB={userB} jwCountry={jwCountry} onCountryChange={handleCountryChange} />
+                    </motion.li>
+                  ))}
+                </ul>
+              </LayoutGroup>
               {isEnriching && (
                 <div className="flex items-center justify-center gap-2 py-6 text-ink-400 text-sm">
                   <MiniSpinner />

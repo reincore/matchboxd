@@ -36,7 +36,6 @@ const FILM_DETAIL_HTML = `
 <body>
   <div id="film-page-wrapper">
     <p class="text-footer">105 mins &nbsp;more info at letterboxd.com</p>
-    <a href="https://www.themoviedb.org/movie/666277">TMDb</a>
     <a href="/films/genre/drama/">Drama</a>
     <a href="/films/genre/romance/">Romance</a>
   </div>
@@ -114,7 +113,6 @@ describe('scrapeFilm — HTML parsing canary', () => {
     expect(result.directors).toContain('Celine Song');
     expect(result.lbRating).toBeCloseTo(4.12, 1);
     expect(result.lbRatingCount).toBe(450000);
-    expect(result.tmdbId).toBe(666277);
   });
 
   it('parses "Xh Ym" runtime format', async () => {
