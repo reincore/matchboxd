@@ -96,7 +96,7 @@ function makeItem(overrides: Partial<PairWatchlistItem> = {}): PairWatchlistItem
     genres: [],
     directors: [],
     letterboxdUrl: 'https://letterboxd.com/film/test-film/',
-    justwatchUrl: 'https://www.justwatch.com/tr/arama?q=Test%20Film',
+    justwatchUrl: 'https://www.justwatch.com/us/search?q=Test%20Film',
     source: 'both',
     enriched: true,
     ...overrides,

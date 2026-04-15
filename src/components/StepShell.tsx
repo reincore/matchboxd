@@ -10,7 +10,8 @@ interface StepShellProps {
 
 export function StepShell({ children, className, padded = true }: StepShellProps) {
   return (
-    <motion.div
+    <motion.main
+      id="main"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
@@ -22,6 +23,6 @@ export function StepShell({ children, className, padded = true }: StepShellProps
       )}
     >
       {children}
-    </motion.div>
+    </motion.main>
   );
 }

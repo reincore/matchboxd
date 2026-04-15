@@ -42,6 +42,8 @@ const SORT_OPTIONS: { id: SortOption; label: string }[] = [
 
 const CURRENT_YEAR = new Date().getFullYear();
 const RECENT_THRESHOLD = CURRENT_YEAR - 5;
+const SHORT_RUNTIME_CEILING = 100;
+const HIGH_RATING_THRESHOLD = 4.0;
 
 function hasGenre(item: PairWatchlistItem, pattern: RegExp) {
   return item.genres.some((g) => pattern.test(g));
@@ -64,8 +66,8 @@ export function PairResultsPage() {
 
   const filtered = useMemo(() => {
     const pool = items.filter((item) => {
-      if (underOneHundred && (item.runtime ?? Infinity) > 100) return false;
-      if (highRatedOnly && (item.lbRating ?? 0) < 4) return false;
+      if (underOneHundred && (item.runtime ?? Infinity) > SHORT_RUNTIME_CEILING) return false;
+      if (highRatedOnly && (item.lbRating ?? 0) < HIGH_RATING_THRESHOLD) return false;
       if (sourceFilter === 'both' && item.source !== 'both') return false;
       if (sourceFilter === 'userA' && item.source === 'userB') return false;
       if (sourceFilter === 'userB' && item.source === 'userA') return false;
@@ -303,7 +305,7 @@ function FilterBar({
             aria-pressed={underOneHundred}
           >
             <span aria-hidden>⏱</span>
-            Under 100 min
+            Under {SHORT_RUNTIME_CEILING} min
           </button>
           <button
             type="button"
@@ -317,7 +319,7 @@ function FilterBar({
             aria-pressed={highRatedOnly}
           >
             <span aria-hidden>★</span>
-            4.0+ LB
+            {HIGH_RATING_THRESHOLD}+ LB
           </button>
         </div>
 
@@ -326,6 +328,7 @@ function FilterBar({
             {count} shown
           </span>
           <select
+            aria-label="Filter by source"
             value={sourceFilter}
             onChange={(e) => onSourceFilterChange(e.target.value as SourceFilter)}
             className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] xl:text-[13px] px-2 xl:px-2.5 py-1.5 xl:py-2 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
@@ -337,6 +340,7 @@ function FilterBar({
             ))}
           </select>
           <select
+            aria-label="Sort order"
             value={sort}
             onChange={(e) => onSortChange(e.target.value as SortOption)}
             className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] xl:text-[13px] px-2 xl:px-2.5 py-1.5 xl:py-2 text-ink-200 focus-ring hover:border-ink-500 transition-colors"

@@ -13,6 +13,14 @@ const ALLOWED_TARGET = /^https:\/\/(www\.)?letterboxd\.com\//;
 
 export default {
   async fetch(request) {
+    const origin = request.headers.get('Origin') || '';
+    if (origin && !ALLOWED_ORIGINS.test(origin)) {
+      return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(request) });
@@ -58,8 +66,11 @@ export default {
 
 function corsHeaders(request) {
   const origin = request.headers.get('Origin') || '';
+  if (!ALLOWED_ORIGINS.test(origin)) {
+    return {};
+  }
   return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.test(origin) ? origin : '*',
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',

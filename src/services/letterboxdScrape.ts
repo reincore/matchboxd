@@ -12,11 +12,13 @@
 import { RSS_ADAPTER, RSS_BASE_URL } from '../utils/env';
 
 const LETTERBOXD_BASE = 'https://letterboxd.com';
+const POSTER_WIDTH = 460;
+const FETCH_TIMEOUT_MS = 15_000;
 
 export class LetterboxdScrapeError extends Error {
   constructor(
     message: string,
-    public code: 'not-found' | 'unknown' = 'unknown',
+    public code: 'not-found' | 'private' | 'unknown' = 'unknown',
     public cause?: unknown,
   ) {
     super(message);
@@ -158,6 +160,11 @@ function looksRateLimited(body: string): boolean {
   );
 }
 
+function looksPrivate(body: string): boolean {
+  const lower = body.toLowerCase();
+  return lower.includes('watchlist is private') || lower.includes('list is private');
+}
+
 function looksLikeLetterboxd(body: string): boolean {
   // Letterboxd ships their base stylesheet on every page.
   return body.includes('letterboxd.com') && (
@@ -203,7 +210,7 @@ function writeToSession(url: string, body: string): void {
   }
 }
 
-async function fetchHtml(targetUrl: string, timeoutMs = 15000): Promise<string> {
+async function fetchHtml(targetUrl: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string> {
   // In-memory
   const cached = HTML_CACHE.get(targetUrl);
   if (cached) return cached;
@@ -335,7 +342,7 @@ function extractSlugsFromListPage(doc: Document): string[] {
     const filmId = node.getAttribute('data-film-id') ?? undefined;
     const itemName = node.getAttribute('data-item-name') ?? undefined;
     const parsed = itemName ? parseItemName(itemName) : undefined;
-    const posterUrl = filmId ? guessPosterUrl(filmId, slug, 460) : undefined;
+    const posterUrl = filmId ? guessPosterUrl(filmId, slug, POSTER_WIDTH) : undefined;
     LIST_PAGE_META.set(slug, {
       filmId,
       title: parsed?.title,
@@ -417,7 +424,12 @@ async function scrapePaginatedList(
       const doc = parseHtml(html);
       const slugs = extractSlugsFromListPage(doc);
       consecutiveFailures = 0; // reset on success
-      if (slugs.length === 0) break;
+      if (slugs.length === 0) {
+        if (page === 1 && looksPrivate(html)) {
+          throw new LetterboxdScrapeError('Watchlist is private', 'private');
+        }
+        break;
+      }
       allSlugs.push(...slugs);
       if (page === 1) estimatedTotal = estimateTotalPages(doc, page);
       onPage?.({ page, total: estimatedTotal, collected: allSlugs.length });
@@ -518,7 +530,7 @@ const MEMORY_CACHE = new Map<string, LetterboxdFilmDetails>();
  *    https://a.ltrbxd.com/.../foo-0-230-0-345-crop.jpg
  *  The four numbers are x-offset, width, y-offset, height. We can rewrite
  *  them to any sane size Letterboxd's CDN can render. */
-export function upscalePoster(url: string | undefined, width = 460): string | undefined {
+export function upscalePoster(url: string | undefined, width = POSTER_WIDTH): string | undefined {
   if (!url) return url;
   const height = Math.round((width * 3) / 2); // posters are 2:3
   return url.replace(

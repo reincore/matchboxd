@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./letterboxdScrape', () => {
   class LetterboxdScrapeError extends Error {
-    code: 'not-found' | 'unknown';
+    code: 'not-found' | 'private' | 'unknown';
     cause?: unknown;
 
-    constructor(message: string, code: 'not-found' | 'unknown' = 'unknown', cause?: unknown) {
+    constructor(message: string, code: 'not-found' | 'private' | 'unknown' = 'unknown', cause?: unknown) {
       super(message);
       this.name = 'LetterboxdScrapeError';
       this.code = code;
@@ -43,7 +43,7 @@ describe('pairWatchlists', () => {
     }));
   });
 
-  it('builds overlap and near-miss results with JustWatch Turkey search links', async () => {
+  it('builds overlap and near-miss results with locale-aware JustWatch search links', async () => {
     scrapeWatchlistMock
       .mockResolvedValueOnce(['shared-film', 'only-a'])
       .mockResolvedValueOnce(['shared-film', 'only-b']);
@@ -79,8 +79,9 @@ describe('pairWatchlists', () => {
     expect(result.items.map((item) => item.slug)).toEqual(['shared-film', 'only-a', 'only-b']);
     expect(streamed).toEqual(['shared-film', 'only-a', 'only-b']);
     expect(stubs).toHaveLength(3);
+    // In Node test env, navigator is undefined → defaults to US locale
     expect(result.items[0].justwatchUrl).toBe(
-      'https://www.justwatch.com/tr/arama?q=Shared%20Film%202018',
+      'https://www.justwatch.com/us/search?q=Shared%20Film%202018',
     );
   });
 

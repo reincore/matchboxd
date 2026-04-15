@@ -89,11 +89,32 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
+/** Detect JustWatch country code from browser locale. Falls back to 'us'. */
+function getJustWatchCountry(): string {
+  if (typeof navigator === 'undefined') return 'us';
+  const lang = (navigator.language ?? '').toLowerCase();
+  const parts = lang.split('-');
+  if (parts.length > 1) return parts[1];
+  // Language-only codes where the language maps directly to a country
+  const langToCountry: Record<string, string> = {
+    tr: 'tr', de: 'de', fr: 'fr', es: 'es', it: 'it', pt: 'pt',
+    nl: 'nl', pl: 'pl', ja: 'jp', ko: 'kr',
+  };
+  return langToCountry[parts[0]] ?? 'us';
+}
+
+const JUSTWATCH_SEARCH_PATHS: Record<string, string> = {
+  tr: 'arama', de: 'Suche', fr: 'recherche', es: 'buscar',
+  it: 'cerca', pt: 'busca', nl: 'zoeken', pl: 'szukaj',
+};
+
 function buildJustWatchSearchUrl(title: string, year?: number) {
+  const country = getJustWatchCountry();
+  const searchPath = JUSTWATCH_SEARCH_PATHS[country] ?? 'search';
   const query = [title, year ? String(year) : '']
     .filter(Boolean)
     .join(' ');
-  return `https://www.justwatch.com/tr/arama?q=${encodeURIComponent(query)}`;
+  return `https://www.justwatch.com/${country}/${searchPath}?q=${encodeURIComponent(query)}`;
 }
 
 /** Build a stub PairWatchlistItem from list-page metadata (no detail scrape). */
@@ -155,8 +176,13 @@ export interface PairWatchlistsOptions {
 }
 
 function watchlistErrorMessage(username: string, err: unknown): string {
-  if (err instanceof LetterboxdScrapeError && err.code === 'not-found') {
-    return `Couldn't find @${username} on Letterboxd. Check the username and try again.`;
+  if (err instanceof LetterboxdScrapeError) {
+    if (err.code === 'not-found') {
+      return `Couldn't find @${username} on Letterboxd. Check the username and try again.`;
+    }
+    if (err.code === 'private') {
+      return `@${username}'s watchlist is set to private. They need to make it public in their Letterboxd settings.`;
+    }
   }
 
   return `Couldn't read @${username}'s public watchlist. Make sure the profile exists, the watchlist is public, and the proxy isn't being rate-limited.`;

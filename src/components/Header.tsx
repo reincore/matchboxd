@@ -30,6 +30,12 @@ export function Header({ onRestart, step, className }: HeaderProps) {
         className,
       )}
     >
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:px-4 focus:py-2 focus:bg-accent focus:text-white focus:rounded-md"
+      >
+        Skip to main content
+      </a>
       {onRestart ? (
         <button
           type="button"

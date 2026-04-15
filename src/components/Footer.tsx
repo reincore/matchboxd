@@ -19,12 +19,12 @@ export function Footer() {
           </a>
           <span aria-hidden>·</span>
           <a
-            href="https://www.justwatch.com/tr"
+            href="https://www.justwatch.com"
             target="_blank"
             rel="noreferrer"
             className="hover:text-ink-200 transition-colors"
           >
-            JustWatch TR
+            JustWatch
           </a>
         </div>
       </div>

@@ -1,8 +1,14 @@
+import { Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { SessionProvider, useSession } from './app/SessionContext';
 import { LandingPage } from './features/onboarding/LandingPage';
-import { PairLoadingPage } from './features/pair/PairLoadingPage';
-import { PairResultsPage } from './features/pair/PairResultsPage';
+
+const PairLoadingPage = lazy(() =>
+  import('./features/pair/PairLoadingPage').then((m) => ({ default: m.PairLoadingPage })),
+);
+const PairResultsPage = lazy(() =>
+  import('./features/pair/PairResultsPage').then((m) => ({ default: m.PairResultsPage })),
+);
 
 function Router() {
   const { step } = useSession();
@@ -16,8 +22,10 @@ function Router() {
   return (
     <AnimatePresence mode="wait">
       {safeStep === 'landing' && <LandingPage key="landing" />}
-      {safeStep === 'pair-loading' && <PairLoadingPage key="pair-loading" />}
-      {safeStep === 'pair-results' && <PairResultsPage key="pair-results" />}
+      <Suspense>
+        {safeStep === 'pair-loading' && <PairLoadingPage key="pair-loading" />}
+        {safeStep === 'pair-results' && <PairResultsPage key="pair-results" />}
+      </Suspense>
     </AnimatePresence>
   );
 }
