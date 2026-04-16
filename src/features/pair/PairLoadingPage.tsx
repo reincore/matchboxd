@@ -153,11 +153,11 @@ function computeProgress(p: PairWatchlistProgress): number {
 
 function MatchboxdLoader() {
   return (
-    <div className="flex justify-center mb-6" aria-hidden>
-      <div className="flex items-center justify-center w-40 h-24 rounded-2xl border border-accent/30 shadow-matchbox-glow">
-        <div className="relative flex items-center justify-center w-full h-full overflow-hidden rounded-2xl">
-          <div className="absolute w-14 h-14 rounded-full bg-accent mix-blend-screen animate-match-left" />
-          <div className="absolute w-14 h-14 rounded-full bg-accent mix-blend-screen animate-match-right" />
+    <div className="flex justify-center mb-5" aria-hidden>
+      <div className="flex items-center justify-center w-24 h-14 rounded-xl border border-accent/30 shadow-matchbox-glow">
+        <div className="relative flex items-center justify-center w-full h-full overflow-hidden rounded-xl">
+          <div className="absolute w-8 h-8 rounded-full bg-accent mix-blend-screen animate-match-left" />
+          <div className="absolute w-8 h-8 rounded-full bg-accent mix-blend-screen animate-match-right" />
         </div>
       </div>
     </div>
