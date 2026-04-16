@@ -46,11 +46,14 @@ export default {
       boxShadow: {
         card: '0 20px 60px -20px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.3)',
         'accent-glow': '0 0 0 1px rgba(236,72,153,0.3), 0 10px 40px -10px rgba(236,72,153,0.35)',
+        'matchbox-glow': '0 0 15px rgba(164, 59, 122, 0.2), inset 0 0 15px rgba(164, 59, 122, 0.2)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
         'slide-up': 'slideUp 0.5s ease-out',
         shimmer: 'shimmer 2s linear infinite',
+        'match-left': 'matchLeft 1.5s ease-in-out infinite',
+        'match-right': 'matchRight 1.5s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -64,6 +67,14 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        matchLeft: {
+          '0%, 100%': { transform: 'translateX(-25px)', opacity: '0.5', boxShadow: '0 0 0 rgba(236, 72, 153, 0)' },
+          '50%': { transform: 'translateX(12px)', opacity: '0.9', boxShadow: '0 0 16px rgba(236, 72, 153, 0.5)' },
+        },
+        matchRight: {
+          '0%, 100%': { transform: 'translateX(25px)', opacity: '0.5', boxShadow: '0 0 0 rgba(236, 72, 153, 0)' },
+          '50%': { transform: 'translateX(-12px)', opacity: '0.9', boxShadow: '0 0 16px rgba(236, 72, 153, 0.5)' },
         },
       },
     },

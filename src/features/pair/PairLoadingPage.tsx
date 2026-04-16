@@ -85,6 +85,8 @@ export function PairLoadingPage() {
               onBack={() => setStep('landing')}
             />
           ) : (
+            <>
+            <MatchboxdLoader />
             <div className="surface-card p-5 xl:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Spinner />
@@ -110,6 +112,7 @@ export function PairLoadingPage() {
                 minute the first time — watchlists can run 20+ pages each.
               </div>
             </div>
+            </>
           )}
         </div>
       </main>
@@ -146,6 +149,19 @@ function computeProgress(p: PairWatchlistProgress): number {
     case 'done':
       return 100;
   }
+}
+
+function MatchboxdLoader() {
+  return (
+    <div className="flex justify-center mb-6" aria-hidden>
+      <div className="flex items-center justify-center w-40 h-24 rounded-2xl border border-accent/30 shadow-matchbox-glow">
+        <div className="relative flex items-center justify-center w-full h-full overflow-hidden rounded-2xl">
+          <div className="absolute w-14 h-14 rounded-full bg-accent mix-blend-screen animate-match-left" />
+          <div className="absolute w-14 h-14 rounded-full bg-accent mix-blend-screen animate-match-right" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Spinner() {
