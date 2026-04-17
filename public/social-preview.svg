@@ -74,18 +74,16 @@
     <!-- Warm glow at the intersection -->
     <ellipse cx="105" cy="105" rx="22" ry="24" fill="url(#match-glow)"/>
 
-    <!-- Left circle — User A -->
-    <circle cx="90" cy="105" r="24" fill="#ec4899" fill-opacity="0.50"/>
-
-    <!-- Right circle — User B (boosted for smoother blend) -->
-    <circle cx="120" cy="105" r="24" fill="#ec4899" fill-opacity="0.32"/>
+    <!-- Equal participants; overlap carries the strongest emphasis. -->
+    <circle cx="90" cy="105" r="24" fill="#ec4899" fill-opacity="0.45"/>
+    <circle cx="120" cy="105" r="24" fill="#ec4899" fill-opacity="0.45"/>
 
     <!--
       Intersection lens: cx1=90, cx2=120, r=24, d=30.
       x=105, y=±√(576−225)=±√351≈±18.74 → 86.26 and 123.74.
     -->
     <path d="M 105 86.26 A 24 24 0 0 1 105 123.74 A 24 24 0 0 1 105 86.26 Z"
-          fill="#ec4899" fill-opacity="0.70"/>
+          fill="#ec4899" fill-opacity="0.78"/>
   </g>
 
   <!-- ── Text block ── -->

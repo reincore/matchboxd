@@ -70,12 +70,11 @@ function Logo() {
       >
         {/* Film frame */}
         <rect x="3" y="5" width="18" height="14" rx="2" stroke="#ec4899" strokeWidth="1.5" strokeOpacity="0.75" />
-        {/* Left circle — User A */}
-        <circle cx="9.5" cy="12" r="3.5" fill="#ec4899" fillOpacity="0.55" />
-        {/* Right circle — User B */}
-        <circle cx="14.5" cy="12" r="3.5" fill="#ec4899" fillOpacity="0.30" />
+        {/* Equal participants; the overlap is the brightest point in the mark. */}
+        <circle cx="9.5" cy="12" r="3.5" fill="#ec4899" fillOpacity="0.45" />
+        <circle cx="14.5" cy="12" r="3.5" fill="#ec4899" fillOpacity="0.45" />
         {/* Intersection lens: y=±√(3.5²−2.5²)=±√6≈±2.449 → 9.55 and 14.45 */}
-        <path d="M 12 9.55 A 3.5 3.5 0 0 1 12 14.45 A 3.5 3.5 0 0 1 12 9.55 Z" fill="#ec4899" fillOpacity="0.82" />
+        <path d="M 12 9.55 A 3.5 3.5 0 0 1 12 14.45 A 3.5 3.5 0 0 1 12 9.55 Z" fill="#ec4899" fillOpacity="0.78" />
       </svg>
     </div>
   );

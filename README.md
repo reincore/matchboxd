@@ -83,6 +83,13 @@ worker/
   deploy.yml                  GitHub Pages deploy
 ```
 
+## Brand Mark Note
+
+- Canonical accent pink is `#ec4899`.
+- `#f9a8d4` is reserved for overlap glow and supporting highlight, not for one participant.
+- The two participant circles are intentionally equal in hue and opacity.
+- The overlap should remain the brightest point in the mark.
+
 ## Local Development
 
 ### Prerequisites

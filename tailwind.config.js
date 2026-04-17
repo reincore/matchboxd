@@ -69,12 +69,12 @@ export default {
           '100%': { backgroundPosition: '200% 0' },
         },
         matchLeft: {
-          '0%, 100%': { transform: 'translateX(-16px)', opacity: '0.5', boxShadow: '0 0 0 rgba(236, 72, 153, 0)' },
-          '50%': { transform: 'translateX(8px)', opacity: '0.9', boxShadow: '0 0 12px rgba(236, 72, 153, 0.5)' },
+          '0%, 100%': { transform: 'translateX(-16px)', opacity: '0.45', boxShadow: '0 0 0 rgba(236, 72, 153, 0)' },
+          '50%': { transform: 'translateX(8px)', opacity: '0.78', boxShadow: '0 0 12px rgba(236, 72, 153, 0.5)' },
         },
         matchRight: {
-          '0%, 100%': { transform: 'translateX(16px)', opacity: '0.5', boxShadow: '0 0 0 rgba(236, 72, 153, 0)' },
-          '50%': { transform: 'translateX(-8px)', opacity: '0.9', boxShadow: '0 0 12px rgba(236, 72, 153, 0.5)' },
+          '0%, 100%': { transform: 'translateX(16px)', opacity: '0.45', boxShadow: '0 0 0 rgba(236, 72, 153, 0)' },
+          '50%': { transform: 'translateX(-8px)', opacity: '0.78', boxShadow: '0 0 12px rgba(236, 72, 153, 0.5)' },
         },
       },
     },

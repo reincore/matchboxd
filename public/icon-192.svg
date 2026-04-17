@@ -28,16 +28,14 @@
   <!-- Warm glow at the intersection -->
   <ellipse cx="96" cy="96" rx="30" ry="24" fill="url(#match-glow)"/>
 
-  <!-- Left circle -->
-  <circle cx="78" cy="96" r="24" fill="#ec4899" fill-opacity="0.50"/>
-
-  <!-- Right circle -->
-  <circle cx="114" cy="96" r="24" fill="#ec4899" fill-opacity="0.32"/>
+  <!-- Equal participants; overlap carries the strongest emphasis. -->
+  <circle cx="78" cy="96" r="24" fill="#ec4899" fill-opacity="0.45"/>
+  <circle cx="114" cy="96" r="24" fill="#ec4899" fill-opacity="0.45"/>
 
   <!--
     Intersection: cx1=78, cx2=114, r=24, d=36.
     x=96, y=±√(576−324)=±√252≈±15.87 → 80.13 and 111.87.
   -->
   <path d="M 96 80.13 A 24 24 0 0 1 96 111.87 A 24 24 0 0 1 96 80.13 Z"
-        fill="#ec4899" fill-opacity="0.70"/>
+        fill="#ec4899" fill-opacity="0.78"/>
 </svg>

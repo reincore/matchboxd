@@ -107,6 +107,7 @@ function MatchboxdLoader() {
     <div className="flex justify-center mb-5" aria-hidden>
       <div className="flex items-center justify-center w-24 h-14 rounded-xl border border-accent/30 shadow-matchbox-glow">
         <div className="relative flex items-center justify-center w-full h-full overflow-hidden rounded-xl">
+          {/* Equal participants in motion; only the overlap should feel brighter. */}
           <div className="absolute w-8 h-8 rounded-full bg-accent mix-blend-screen animate-match-left" />
           <div className="absolute w-8 h-8 rounded-full bg-accent mix-blend-screen animate-match-right" />
         </div>
