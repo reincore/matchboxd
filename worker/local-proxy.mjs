@@ -1,6 +1,8 @@
 // Tiny local CORS proxy for development/testing.
 // Start: node worker/local-proxy.mjs
-// Then set VITE_RSS_ADAPTER=custom VITE_RSS_BASE_URL=http://localhost:8787
+// Then set:
+//   VITE_LETTERBOXD_PROXY_MODE=custom
+//   VITE_LETTERBOXD_PROXY_BASE_URL=http://localhost:8787
 
 import http from 'node:http';
 import https from 'node:https';

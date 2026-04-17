@@ -55,7 +55,7 @@ describe('pairWatchlists', () => {
     }));
   });
 
-  it('builds overlap and near-miss results with locale-aware JustWatch search links', async () => {
+  it('builds overlap and near-miss results without storing derived JustWatch URLs', async () => {
     scrapeWatchlistMock
       .mockResolvedValueOnce(['shared-film', 'only-a'])
       .mockResolvedValueOnce(['shared-film', 'only-b']);
@@ -91,10 +91,7 @@ describe('pairWatchlists', () => {
     expect(result.items.map((item) => item.slug)).toEqual(['shared-film', 'only-a', 'only-b']);
     expect(streamed).toEqual(['shared-film', 'only-a', 'only-b']);
     expect(stubs).toHaveLength(3);
-    // In Node test env, navigator is undefined → defaults to US locale
-    expect(result.items[0].justwatchUrl).toBe(
-      'https://www.justwatch.com/us/search?q=Shared%20Film%202018',
-    );
+    expect('justwatchUrl' in result.items[0]).toBe(false);
   });
 
   it('emits empty stubs and returns cleanly when nothing is selected for enrichment', async () => {

@@ -17,7 +17,10 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'node',
       globals: false,
-      include: ['src/**/*.{test,spec}.{ts,tsx}'],
+      include: [
+        'src/**/*.{test,spec}.{ts,tsx}',
+        'worker/**/*.{test,spec}.{ts,tsx,js}',
+      ],
     },
   };
 });

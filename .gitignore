@@ -13,6 +13,7 @@ matchboxd-product-log.md
 # editors
 .vscode/*
 !.vscode/extensions.json
+.claude/
 .idea
 .DS_Store
 *.suo

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildJustWatchSearchUrl,
+  buildJustWatchSearchUrlForCountry,
   getCountryOverride,
   getDetectedCountry,
   setCountryFromHeader,
@@ -165,6 +166,12 @@ describe('buildJustWatchSearchUrl', () => {
     setCountryOverride('de');
     expect(buildJustWatchSearchUrl('Matrix')).toBe(
       'https://www.justwatch.com/de/Suche?q=Matrix',
+    );
+  });
+
+  it('builds a URL for an explicit country code', () => {
+    expect(buildJustWatchSearchUrlForCountry('Perfect Days', 2023, 'tr')).toBe(
+      'https://www.justwatch.com/tr/arama?q=Perfect%20Days%202023',
     );
   });
 });

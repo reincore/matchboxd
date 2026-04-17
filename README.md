@@ -48,6 +48,15 @@ Live at [matchboxd.com](https://matchboxd.com).
 - Cloudflare Workers
 - GitHub Pages
 
+## Architecture
+
+- `src/app/SessionContext.tsx` keeps the small persisted session state plus the in-memory pairing run state.
+- `src/features/onboarding` owns username entry and validation.
+- `src/features/pair` owns the loading/results flow, shared results filters, and UI hooks.
+- `src/services/letterboxd/` contains the proxy client, watchlist scraping, film scraping, and list-page metadata cache.
+- `src/services/pairWatchlists/` contains candidate selection, progress reporting, and enrichment helpers.
+- `worker/` contains the Cloudflare Worker used as the controlled production proxy.
+
 ## Local Development
 
 ```bash
@@ -66,9 +75,15 @@ node worker/local-proxy.mjs
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `VITE_RSS_ADAPTER` | Proxy mode: `rss2json`, `allorigins`, or `custom` | `allorigins` |
-| `VITE_RSS_BASE_URL` | Base URL for the custom proxy/Worker | *(empty)* |
+| `VITE_LETTERBOXD_PROXY_MODE` | `auto` uses the controlled defaults, `custom` prepends your own proxy | `auto` |
+| `VITE_LETTERBOXD_PROXY_BASE_URL` | Base URL for the custom proxy/Worker | *(empty)* |
+| `VITE_ENABLE_PUBLIC_PROXY_FALLBACKS` | Enables public proxy fallbacks after the controlled chain fails | `false` |
 | `VITE_APP_BASE_PATH` | Base path for the deployed app | `/` |
+
+Deprecated but still supported for one migration pass:
+
+- `VITE_RSS_ADAPTER`
+- `VITE_RSS_BASE_URL`
 
 ## Deploy
 
@@ -84,23 +99,27 @@ npx wrangler deploy
 Then point the app at it:
 
 ```bash
-VITE_RSS_ADAPTER=custom
-VITE_RSS_BASE_URL=https://<your-worker>.workers.dev/
+VITE_LETTERBOXD_PROXY_MODE=custom
+VITE_LETTERBOXD_PROXY_BASE_URL=https://<your-worker>.workers.dev/
 ```
 
 ## Current Notes
 
 - Matchboxd currently reads public Letterboxd HTML pages rather than an official public API.
-- A Cloudflare Worker improves reliability and speed, but it does not remove Letterboxd scraping legal risk.
-- Some legacy recommendation-engine files still exist in the repo, but the live app flow is:
+- The controlled proxy path improves reliability and speed, but it does not remove Letterboxd scraping legal risk.
+- Public proxy fallbacks are available, but they are opt-in.
+- The live app flow is:
   `landing -> pair-loading -> pair-results`
 
 ## Testing
 
 ```bash
+npm run lint
 npm test
 npm run build
 ```
+
+CI runs on `pull_request` and `push` via `.github/workflows/ci.yml`.
 
 ## License
 
