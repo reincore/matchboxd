@@ -2,23 +2,17 @@ import { cn } from '../utils/cn';
 
 interface HeaderProps {
   onRestart?: () => void;
-  step?: string;
   className?: string;
 }
 
-export function Header({ onRestart, step, className }: HeaderProps) {
+export function Header({ onRestart, className }: HeaderProps) {
   const brand = (
     <>
       <Logo />
-      <div>
-        <div className="font-display text-lg leading-none sm:text-xl lg:text-[1.75rem]">
+      <div className="text-ink-50">
+        <div className="font-display text-xl leading-none tracking-tight sm:text-[1.6rem] lg:text-[2rem]">
           Matchboxd
         </div>
-        {step && (
-          <div className="mt-0.5 text-[10px] uppercase tracking-widest text-ink-400 sm:text-[11px] lg:text-[13px]">
-            {step}
-          </div>
-        )}
       </div>
     </>
   );
@@ -41,12 +35,12 @@ export function Header({ onRestart, step, className }: HeaderProps) {
           type="button"
           onClick={onRestart}
           aria-label="Start over"
-          className="flex items-center gap-2 rounded-lg focus-ring"
+          className="flex items-center gap-2.5 rounded-lg focus-ring sm:gap-3"
         >
           {brand}
         </button>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           {brand}
         </div>
       )}
@@ -65,14 +59,14 @@ export function Header({ onRestart, step, className }: HeaderProps) {
 
 function Logo() {
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent/30 bg-ink-800 sm:h-9 sm:w-9 lg:h-12 lg:w-12 lg:rounded-xl">
+    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-accent/35 bg-ink-800/95 shadow-matchbox-glow sm:h-10 sm:w-10 lg:h-12 lg:w-12">
       <svg
         width="18"
         height="18"
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden
-        className="h-[18px] w-[18px] sm:h-5 sm:w-5 lg:h-7 lg:w-7"
+        className="h-5 w-5 sm:h-[22px] sm:w-[22px] lg:h-7 lg:w-7"
       >
         {/* Film frame */}
         <rect x="3" y="5" width="18" height="14" rx="2" stroke="#ec4899" strokeWidth="1.5" strokeOpacity="0.75" />

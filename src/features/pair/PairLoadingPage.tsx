@@ -17,7 +17,7 @@ export function PairLoadingPage() {
 
   return (
     <StepShell>
-      <Header onRestart={() => setStep('landing')} step="matching" />
+      <Header onRestart={() => setStep('landing')} />
       <main id="main" className="flex flex-1 items-center px-4 sm:px-6">
         <div className="max-w-lg xl:max-w-xl mx-auto w-full py-8">
           <div className="mb-8">
