@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  🍿 Movies you both want to watch, with ratings and where to stream.
+  Movies you both want to watch, with ratings and where to stream.
 </p>
 
 <p align="center">
@@ -18,46 +18,79 @@
   <a href="https://github.com/reincore/matchboxd">Repository</a>
 </p>
 
-Matchboxd is a mobile-first web app for couples choosing a movie together from their public Letterboxd watchlists. Enter two usernames, get a shared shortlist, and stop scrolling forever.
+Matchboxd is a lightweight web app that compares two public Letterboxd watchlists and builds one shortlist you can actually use. Enter two usernames, get the overlap first, add a few near-miss picks from each person, and open JustWatch searches in the detected or selected country.
 
-Live at [matchboxd.com](https://matchboxd.com).
+## What The App Does
 
-## What It Does
+- Reads two public Letterboxd watchlists
+- Finds the shared overlap between them
+- Adds a balanced set of near-miss picks from each person's list
+- Progressively enriches each film with poster, rating, rating count, runtime, genres, and directors
+- Lets users filter by mood, source, runtime, and rating
+- Builds JustWatch search links using detected country with a manual override
 
-- 💘 Finds films that overlap across two watchlists
-- 🎯 Adds near-miss picks from each person's list
-- ⚡ Loads fast with progressive enrichment
-- 🧾 Shows ratings, runtime, genres, directors, and poster art
-- 📺 Links out to where to stream in Turkey
+## Current Product Flow
 
-## How It Feels
+The live app intentionally keeps the product small:
 
-- Username-only flow
-- No account setup
-- Mobile-first design
-- Sticky filters and sorting
-- Clean shortlist view instead of endless browsing
+`landing -> pair-loading -> pair-results`
 
-## Tech Stack
+There are no accounts, no database-backed history, and no saved matches beyond the small session state stored in local storage for the current browser.
+
+## How Matching Works
+
+1. Matchboxd fetches both users' public watchlists through a proxy path because browsers cannot read Letterboxd HTML directly.
+2. It finds the overlap between the two lists.
+3. It adds near-miss candidates from each person's non-overlapping titles, alternating between users so one side does not dominate the list.
+4. It renders stubs quickly, then progressively enriches them with detail-page data.
+5. The results page lets the user filter, sort, and switch JustWatch country before opening streaming searches.
+
+By default, the pairing logic caps enrichment to:
+
+- up to 60 overlapping titles
+- up to 40 near-miss titles
+
+## Stack
 
 - React 18
 - TypeScript
 - Vite
 - Tailwind CSS
 - Framer Motion
+- Vitest
 - Cloudflare Workers
 - GitHub Pages
 
-## Architecture
+## Project Layout
 
-- `src/app/SessionContext.tsx` keeps the small persisted session state plus the in-memory pairing run state.
-- `src/features/onboarding` owns username entry and validation.
-- `src/features/pair` owns the loading/results flow, shared results filters, and UI hooks.
-- `src/services/letterboxd/` contains the proxy client, watchlist scraping, film scraping, and list-page metadata cache.
-- `src/services/pairWatchlists/` contains candidate selection, progress reporting, and enrichment helpers.
-- `worker/` contains the Cloudflare Worker used as the controlled production proxy.
+```text
+src/
+  app/
+    SessionContext.tsx        persisted session + in-memory pairing state
+  features/
+    onboarding/               landing page and username validation
+    pair/                     loading/results flow, filters, and hooks
+  components/                 shared layout and UI primitives
+  services/
+    letterboxd/               proxy client, watchlist scraping, film scraping
+    pairWatchlists/           candidate selection, progress, enrichment helpers
+    countryDetection.ts       JustWatch region detection and override logic
+worker/
+  index.js                    Cloudflare Worker proxy for production
+  local-proxy.mjs             tiny local proxy for development
+.github/workflows/
+  ci.yml                      typecheck, test, build
+  deploy.yml                  GitHub Pages deploy
+```
 
 ## Local Development
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+
+### Run The App
 
 ```bash
 npm install
@@ -65,29 +98,77 @@ cp .env.example .env
 npm run dev
 ```
 
-For the smoothest local Letterboxd fetches, run the local proxy too:
+The app will be available at the local Vite URL printed in the terminal.
+
+### Recommended: run the local proxy too
+
+Letterboxd scraping is more reliable in local development when the proxy is running:
 
 ```bash
 node worker/local-proxy.mjs
 ```
 
-## Environment
+With the default `VITE_LETTERBOXD_PROXY_MODE=auto`, the app will prefer the local proxy on `http://localhost:8787` during development when it is available.
+
+## Environment Variables
+
+Important: Matchboxd is a client-side app. Any `VITE_*` variable ends up in the shipped JavaScript bundle and should be treated as public.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `VITE_LETTERBOXD_PROXY_MODE` | `auto` uses the controlled defaults, `custom` prepends your own proxy | `auto` |
-| `VITE_LETTERBOXD_PROXY_BASE_URL` | Base URL for the custom proxy/Worker | *(empty)* |
-| `VITE_ENABLE_PUBLIC_PROXY_FALLBACKS` | Enables public proxy fallbacks after the controlled chain fails | `false` |
-| `VITE_APP_BASE_PATH` | Base path for the deployed app | `/` |
+| `VITE_LETTERBOXD_PROXY_MODE` | `auto` uses the local proxy in dev and the hosted worker/default chain elsewhere; `custom` prepends your own proxy base URL | `auto` |
+| `VITE_LETTERBOXD_PROXY_BASE_URL` | Base URL for a custom proxy or Worker that accepts `?url=` and returns raw HTML | *(empty)* |
+| `VITE_ENABLE_PUBLIC_PROXY_FALLBACKS` | Allows public proxy fallbacks after controlled proxies fail | `false` |
+| `VITE_APP_BASE_PATH` | Base path for the deployed SPA | `/` |
 
-Deprecated but still supported for one migration pass:
+Deprecated aliases are still supported for one migration pass:
 
 - `VITE_RSS_ADAPTER`
 - `VITE_RSS_BASE_URL`
 
-## Deploy
+## Available Scripts
 
-The frontend is deployed to GitHub Pages at [matchboxd.com](https://matchboxd.com).
+| Command | What it does |
+|---|---|
+| `npm run dev` | Starts the Vite development server |
+| `npm run build` | Type-checks and builds the production bundle |
+| `npm run preview` | Serves the production build locally |
+| `npm run lint` | Runs TypeScript type-checking with no emit |
+| `npm test` | Runs the full Vitest suite once |
+| `npm run test:watch` | Runs Vitest in watch mode |
+
+## Testing And CI
+
+Run the main checks locally with:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+The repository also includes:
+
+- integration coverage for the app flow
+- service tests for filtering, pairing, country detection, and proxy behavior
+- worker tests for origin and target allowlists
+
+GitHub Actions runs these checks on `pull_request` and on pushes to `main` via `.github/workflows/ci.yml`.
+
+## Deployment
+
+### Frontend
+
+The frontend deploys to GitHub Pages through `.github/workflows/deploy.yml`.
+
+That workflow:
+
+1. installs dependencies
+2. builds the app
+3. copies `dist/index.html` to `dist/404.html` for SPA fallback
+4. publishes the build through GitHub Pages
+
+### Proxy Worker
 
 For the preferred production proxy path, deploy the Cloudflare Worker in `worker/`:
 
@@ -96,30 +177,35 @@ cd worker
 npx wrangler deploy
 ```
 
-Then point the app at it:
+The worker:
+
+- only allows approved origins
+- only proxies `https://letterboxd.com/...` targets
+- returns `X-Client-Country` so the frontend can derive the default JustWatch region
+
+After deploying your own worker, point the app at it with:
 
 ```bash
 VITE_LETTERBOXD_PROXY_MODE=custom
 VITE_LETTERBOXD_PROXY_BASE_URL=https://<your-worker>.workers.dev/
 ```
 
-## Current Notes
+## Operational Notes
 
-- Matchboxd currently reads public Letterboxd HTML pages rather than an official public API.
-- The controlled proxy path improves reliability and speed, but it does not remove Letterboxd scraping legal risk.
-- Public proxy fallbacks are available, but they are opt-in.
-- The live app flow is:
-  `landing -> pair-loading -> pair-results`
+- Matchboxd scrapes public Letterboxd HTML pages. It does not use an official Letterboxd API.
+- Public profiles and public watchlists are required.
+- JustWatch links are search URLs, not guaranteed deep links to an exact title page.
+- The controlled worker path is the preferred production setup.
+- Public proxy fallbacks are intentionally opt-in.
 
-## Testing
+## Common Failure Modes
 
-```bash
-npm run lint
-npm test
-npm run build
-```
-
-CI runs on `pull_request` and `push` via `.github/workflows/ci.yml`.
+- `Couldn't find @user on Letterboxd`
+  Usually means the username is misspelled or does not exist.
+- `@user's watchlist is set to private`
+  The profile may exist, but the watchlist is not publicly readable.
+- `Couldn't read one or both watchlists`
+  A proxy may be blocked or rate-limited. Retry after a short wait or switch to a controlled proxy.
 
 ## License
 
