@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Footer } from '../../components/Footer';
 import { Header } from '../../components/Header';
 import { StepShell } from '../../components/StepShell';
+import { FormField } from '../../components/ui/FormField';
 import { validateLetterboxdUsername } from '../../utils/slug';
 
 export function LandingPage() {
@@ -39,7 +40,7 @@ export function LandingPage() {
   return (
     <StepShell>
       <Header />
-      <main className="flex-1 flex items-center px-4 sm:px-6">
+      <main id="main" className="flex flex-1 items-center px-4 sm:px-6">
         <div className="max-w-xl xl:max-w-2xl mx-auto w-full py-8">
           <div className="mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-ink-700 bg-ink-900/60 text-[11px] xl:text-[12px] text-ink-300 mb-5">
@@ -63,6 +64,7 @@ export function LandingPage() {
             className="space-y-4"
           >
             <UsernameField
+              id="user-a"
               label="Your Letterboxd username"
               value={userA}
               onChange={setUserA}
@@ -70,6 +72,7 @@ export function LandingPage() {
               autoFocus
             />
             <UsernameField
+              id="user-b"
               label="Their Letterboxd username"
               value={userB}
               onChange={setUserB}
@@ -77,7 +80,10 @@ export function LandingPage() {
             />
 
             {error && (
-              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+              <div
+                role="alert"
+                className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+              >
                 {error}
               </div>
             )}
@@ -94,6 +100,7 @@ export function LandingPage() {
 }
 
 interface UsernameFieldProps {
+  id: string;
   label: string;
   value: string;
   onChange: (s: string) => void;
@@ -101,15 +108,13 @@ interface UsernameFieldProps {
   autoFocus?: boolean;
 }
 
-function UsernameField({ label, value, onChange, placeholder, autoFocus }: UsernameFieldProps) {
+function UsernameField({ id, label, value, onChange, placeholder, autoFocus }: UsernameFieldProps) {
   return (
-    <label className="block">
-      <span className="block text-xs xl:text-[13px] uppercase tracking-wider text-ink-400 mb-1.5">
-        {label}
-      </span>
-      <div className="flex items-center surface-card focus-within:border-accent/70 transition-colors pl-3">
+    <FormField label={label} htmlFor={id}>
+      <div className="surface-field flex items-center rounded-2xl pl-3 transition-colors focus-within:border-accent/70">
         <span className="text-ink-500 text-sm xl:text-base mr-1">@</span>
         <input
+          id={id}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -121,6 +126,6 @@ function UsernameField({ label, value, onChange, placeholder, autoFocus }: Usern
           className="flex-1 bg-transparent py-3.5 xl:py-4 pr-3 text-base xl:text-lg placeholder:text-ink-500 focus:outline-none"
         />
       </div>
-    </label>
+    </FormField>
   );
 }
