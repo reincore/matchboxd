@@ -13,6 +13,14 @@ export type MoodFilter =
 export type SourceFilter = 'all' | 'both' | 'userA' | 'userB';
 export type SortOption = 'rating' | 'year-desc' | 'runtime-asc' | 'title';
 
+export interface PairResultsFilters {
+  mood: MoodFilter;
+  sourceFilter: SourceFilter;
+  underOneHundred: boolean;
+  highRatedOnly: boolean;
+  sort: SortOption;
+}
+
 export const MOODS: { id: MoodFilter; label: string; emoji: string }[] = [
   { id: 'all', label: 'Everything', emoji: '✨' },
   { id: 'horror', label: 'Horror', emoji: '🩸' },
@@ -37,11 +45,77 @@ export const RECENT_THRESHOLD = CURRENT_YEAR - 5;
 export const SHORT_RUNTIME_CEILING = 100;
 export const HIGH_RATING_THRESHOLD = 4.0;
 
+export const DEFAULT_PAIR_RESULTS_FILTERS: PairResultsFilters = {
+  mood: 'all',
+  sourceFilter: 'all',
+  underOneHundred: false,
+  highRatedOnly: false,
+  sort: 'rating',
+};
+
 export function hasGenre(item: PairWatchlistItem, pattern: RegExp) {
   return item.genres.some((g) => pattern.test(g));
 }
 
-export function sortItems(items: PairWatchlistItem[], sort: SortOption): PairWatchlistItem[] {
+export function filterPairItems(
+  items: PairWatchlistItem[],
+  filters: PairResultsFilters,
+): PairWatchlistItem[] {
+  return items.filter((item) => {
+    if (
+      filters.underOneHundred &&
+      (item.runtime ?? Infinity) > SHORT_RUNTIME_CEILING
+    ) {
+      return false;
+    }
+
+    if (
+      filters.highRatedOnly &&
+      (item.lbRating ?? 0) < HIGH_RATING_THRESHOLD
+    ) {
+      return false;
+    }
+
+    if (filters.sourceFilter === 'both' && item.source !== 'both') return false;
+    if (filters.sourceFilter === 'userA' && item.source === 'userB') return false;
+    if (filters.sourceFilter === 'userB' && item.source === 'userA') return false;
+
+    if (
+      filters.mood !== 'all' &&
+      filters.mood !== 'recent' &&
+      !item.enriched &&
+      item.genres.length === 0
+    ) {
+      return true;
+    }
+
+    switch (filters.mood) {
+      case 'horror':
+        return hasGenre(item, /horror/i);
+      case 'romcom':
+        return hasGenre(item, /romance/i) && hasGenre(item, /comedy/i);
+      case 'drama':
+        return hasGenre(item, /drama/i);
+      case 'comedy':
+        return hasGenre(item, /comedy/i);
+      case 'thriller':
+        return hasGenre(item, /thriller/i);
+      case 'scifi':
+        return hasGenre(item, /science fiction|sci-?fi/i);
+      case 'animation':
+        return hasGenre(item, /animation/i);
+      case 'recent':
+        return (item.year ?? 0) >= RECENT_THRESHOLD;
+      default:
+        return true;
+    }
+  });
+}
+
+export function sortPairItems(
+  items: PairWatchlistItem[],
+  sort: SortOption,
+): PairWatchlistItem[] {
   const copy = [...items];
   switch (sort) {
     case 'rating':
@@ -63,6 +137,8 @@ export function sortItems(items: PairWatchlistItem[], sort: SortOption): PairWat
   }
   return copy;
 }
+
+export const sortItems = sortPairItems;
 
 export function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;

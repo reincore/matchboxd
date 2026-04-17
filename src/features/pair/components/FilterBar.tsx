@@ -1,6 +1,9 @@
-import type { MoodFilter, SourceFilter, SortOption } from '../filters';
+import { JUSTWATCH_COUNTRY_LIST } from '../../../services/countryDetection';
+import { Pill } from '../../../components/ui/Pill';
+import { SelectField, type SelectOption } from '../../../components/ui/SelectField';
 import { MOODS, SORT_OPTIONS, SHORT_RUNTIME_CEILING, HIGH_RATING_THRESHOLD } from '../filters';
 import { cn } from '../../../utils/cn';
+import type { MoodFilter, SourceFilter, SortOption } from '../filters';
 
 export interface FilterBarProps {
   mood: MoodFilter;
@@ -16,6 +19,9 @@ export interface FilterBarProps {
   count: number;
   userA: string;
   userB: string;
+  country: string;
+  hasCountryOverride: boolean;
+  onCountryChange: (code: string | null) => void;
 }
 
 export function FilterBar({
@@ -32,103 +38,136 @@ export function FilterBar({
   count,
   userA,
   userB,
+  country,
+  hasCountryOverride,
+  onCountryChange,
 }: FilterBarProps) {
-  const sourceOptions: { id: SourceFilter; label: string }[] = [
-    { id: 'all', label: 'All films' },
-    { id: 'both', label: 'Both' },
-    { id: 'userA', label: `@${userA}` },
-    { id: 'userB', label: `@${userB}` },
+  const sourceOptions: SelectOption[] = [
+    { value: 'all', label: 'All films' },
+    { value: 'both', label: 'Both' },
+    { value: 'userA', label: `@${userA}` },
+    { value: 'userB', label: `@${userB}` },
+  ];
+  const sortOptions: SelectOption[] = SORT_OPTIONS.map((option) => ({
+    value: option.id,
+    label: option.label,
+  }));
+  const countryOptions: SelectOption[] = [
+    {
+      value: '',
+      label: `Auto detect (${country.toUpperCase()})`,
+    },
+    ...JUSTWATCH_COUNTRY_LIST.map((option) => ({
+      value: option.code,
+      label: option.name,
+    })),
   ];
 
   return (
-    <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 xl:py-4 bg-ink-950/85 backdrop-blur-md border-b border-ink-800">
+    <div className="sticky top-0 z-10 -mx-4 border-b border-ink-800 bg-ink-950/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 xl:py-4">
       <div className="flex flex-wrap items-center gap-3 xl:gap-4">
         <div className="flex flex-wrap items-center gap-2 xl:gap-2.5">
-          <span className="text-[11px] xl:text-[12px] uppercase tracking-[0.18em] text-ink-500">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-ink-500 xl:text-[12px]">
             Mood
           </span>
           {MOODS.map((m) => (
-            <button
+            <FilterChip
               key={m.id}
-              type="button"
+              isActive={mood === m.id}
               onClick={() => onMoodChange(m.id)}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 xl:px-3.5 xl:py-2 rounded-full text-[12px] xl:text-[13px] font-medium border transition-colors focus-ring',
-                mood === m.id
-                  ? 'bg-accent/15 border-accent/60 text-accent-soft'
-                  : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
-              )}
             >
               <span aria-hidden>{m.emoji}</span>
               {m.label}
-            </button>
+            </FilterChip>
           ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:gap-2.5 pl-0 sm:pl-1 xl:pl-3 sm:border-l sm:border-ink-800">
-          <span className="text-[11px] xl:text-[12px] uppercase tracking-[0.18em] text-ink-500">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-ink-500 xl:text-[12px]">
             Quick filter
           </span>
-          <button
-            type="button"
+          <FilterChip
+            isActive={underOneHundred}
+            tone="success"
             onClick={() => onUnderOneHundredChange(!underOneHundred)}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 xl:px-3.5 xl:py-2 rounded-full text-[12px] xl:text-[13px] font-medium border transition-colors focus-ring',
-              underOneHundred
-                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300'
-                : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
-            )}
-            aria-pressed={underOneHundred}
+            ariaPressed={underOneHundred}
           >
             <span aria-hidden>⏱</span>
             Under {SHORT_RUNTIME_CEILING} min
-          </button>
-          <button
-            type="button"
+          </FilterChip>
+          <FilterChip
+            isActive={highRatedOnly}
+            tone="warning"
             onClick={() => onHighRatedOnlyChange(!highRatedOnly)}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 xl:px-3.5 xl:py-2 rounded-full text-[12px] xl:text-[13px] font-medium border transition-colors focus-ring',
-              highRatedOnly
-                ? 'bg-amber-500/10 border-amber-400/50 text-amber-200'
-                : 'bg-ink-900/60 border-ink-700 text-ink-300 hover:text-ink-100 hover:border-ink-500',
-            )}
-            aria-pressed={highRatedOnly}
+            ariaPressed={highRatedOnly}
           >
             <span aria-hidden>★</span>
             {HIGH_RATING_THRESHOLD}+ LB
-          </button>
+          </FilterChip>
         </div>
 
-        <div className="ml-auto flex items-center gap-2 xl:gap-2.5">
-          <span className="text-[11px] xl:text-[12px] uppercase tracking-wider text-ink-500">
+        <div className="ml-auto flex flex-wrap items-center gap-2 xl:gap-2.5">
+          <Pill tone="muted" className="uppercase tracking-wider text-ink-500">
             {count} shown
-          </span>
-          <select
+          </Pill>
+          <SelectField
+            aria-label="JustWatch country"
+            value={hasCountryOverride ? country : ''}
+            onChange={(event) => onCountryChange(event.target.value || null)}
+            options={countryOptions}
+            className="min-w-[10rem]"
+          />
+          <SelectField
             aria-label="Filter by source"
             value={sourceFilter}
-            onChange={(e) => onSourceFilterChange(e.target.value as SourceFilter)}
-            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] xl:text-[13px] px-2 xl:px-2.5 py-1.5 xl:py-2 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
-          >
-            {sourceOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <select
+            onChange={(event) => onSourceFilterChange(event.target.value as SourceFilter)}
+            options={sourceOptions}
+          />
+          <SelectField
             aria-label="Sort order"
             value={sort}
-            onChange={(e) => onSortChange(e.target.value as SortOption)}
-            className="bg-ink-900/60 border border-ink-700 rounded-lg text-[12px] xl:text-[13px] px-2 xl:px-2.5 py-1.5 xl:py-2 text-ink-200 focus-ring hover:border-ink-500 transition-colors"
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(event) => onSortChange(event.target.value as SortOption)}
+            options={sortOptions}
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  isActive,
+  onClick,
+  children,
+  tone = 'accent',
+  ariaPressed,
+}: {
+  isActive: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  tone?: 'accent' | 'success' | 'warning';
+  ariaPressed?: boolean;
+}) {
+  const activeClasses =
+    tone === 'success'
+      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+      : tone === 'warning'
+        ? 'border-amber-400/50 bg-amber-500/10 text-amber-200'
+        : 'border-accent/60 bg-accent/15 text-accent-soft';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ariaPressed}
+      className={cn(
+        'focus-ring inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors xl:px-3.5 xl:py-2 xl:text-[13px]',
+        isActive
+          ? activeClasses
+          : 'border-ink-700 bg-ink-900/60 text-ink-300 hover:border-ink-500 hover:text-ink-100',
+      )}
+    >
+      {children}
+    </button>
   );
 }

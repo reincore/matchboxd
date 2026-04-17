@@ -9,142 +9,34 @@
 // The whole thing is done client-side via a CORS proxy.
 
 import {
-  getListPageMeta,
   LetterboxdScrapeError,
-  scrapeFilm,
   scrapeWatchlist,
-  upscalePoster,
-  type LetterboxdFilmDetails,
 } from './letterboxdScrape';
-import { buildJustWatchSearchUrl } from './countryDetection';
-import { slugToTitle, validateLetterboxdUsername } from '../utils/slug';
-
-export type ItemSource = 'both' | 'userA' | 'userB';
-
-export interface PairWatchlistItem {
-  slug: string;
-  title: string;
-  year?: number;
-  posterUrl?: string;
-  synopsis?: string;
-  runtime?: number;
-  genres: string[];
-  directors: string[];
-  lbRating?: number;
-  lbRatingCount?: number;
-  letterboxdUrl: string;
-  justwatchUrl: string;
-  source: ItemSource;
-  /** True if this item has been enriched with detail page data. */
-  enriched: boolean;
-}
-
-export interface PairWatchlistProgress {
-  stage: 'watchlists' | 'intersection' | 'details' | 'done';
-  message: string;
-  detailsLoaded?: number;
-  detailsTotal?: number;
-  pageLoaded?: number;
-  pageTotal?: number;
-}
-
-export interface PairWatchlistResult {
-  items: PairWatchlistItem[];
-  counts: {
-    watchlistA: number;
-    watchlistB: number;
-    overlap: number;
-    filtered: number;
-    enriched: number; // successfully scraped detail pages
-  };
-  userA: string;
-  userB: string;
-}
-
-export class PairWatchlistError extends Error {
-  constructor(
-    message: string,
-    public cause?: unknown,
-  ) {
-    super(message);
-    this.name = 'PairWatchlistError';
-  }
-}
-
-/** Run many async tasks with a bounded concurrency window. */
-async function runWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  worker: (item: T, idx: number) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const i = cursor++;
-      results[i] = await worker(items[i], i);
-    }
-  });
-  await Promise.all(workers);
-  return results;
-}
-
-/** Build a stub PairWatchlistItem from list-page metadata (no detail scrape). */
-function buildStub(slug: string, source: ItemSource): PairWatchlistItem {
-  const meta = getListPageMeta(slug);
-  return {
-    slug,
-    title: meta?.title ?? slugToTitle(slug),
-    year: meta?.year,
-    posterUrl: meta?.posterUrl,
-    genres: [],
-    directors: [],
-    letterboxdUrl: `https://letterboxd.com/film/${slug}/`,
-    justwatchUrl: buildJustWatchSearchUrl(
-      meta?.title ?? slugToTitle(slug),
-      meta?.year,
-    ),
-    source,
-    enriched: false,
-  };
-}
-
-function toItem(details: LetterboxdFilmDetails, source: ItemSource): PairWatchlistItem {
-  return {
-    slug: details.slug,
-    title: details.title,
-    year: details.year,
-    posterUrl: upscalePoster(details.posterUrl, 460),
-    synopsis: details.synopsis,
-    runtime: details.runtime,
-    genres: details.genres,
-    directors: details.directors,
-    lbRating: details.lbRating,
-    lbRatingCount: details.lbRatingCount,
-    letterboxdUrl: `https://letterboxd.com/film/${details.slug}/`,
-    justwatchUrl: buildJustWatchSearchUrl(details.title, details.year),
-    source,
-    enriched: true,
-  };
-}
-
-export interface PairWatchlistsOptions {
-  /** Called as we move through stages; enables a live progress UI. */
-  onProgress?: (p: PairWatchlistProgress) => void;
-  /** Called with each enriched item as soon as it's ready — enables streaming UI. */
-  onItem?: (item: PairWatchlistItem) => void;
-  /** Called with all stubs immediately after intersection, before enrichment. */
-  onStubs?: (stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => void;
-  /** Cap on watchlist pages per user (each page = 28 films). */
-  maxWatchlistPages?: number;
-  /** Parallel requests when enriching film details. With per-proxy throttle
-   *  this maps to parallel proxy usage. */
-  detailConcurrency?: number;
-  /** Optional cap on total films sent to enrichment. */
-  maxOverlap?: number;
-  /** Cap on near-miss films (from one watchlist only) to enrich. */
-  maxNearMisses?: number;
-}
+import { validateLetterboxdUsername } from '../utils/slug';
+import { enrichPairCandidates } from './pairWatchlists/enrichment';
+import { buildStubItem } from './pairWatchlists/itemFactory';
+import {
+  createWatchlistProgressReporter,
+  reportDone,
+  reportIntersection,
+  reportWatchlistStart,
+} from './pairWatchlists/progress';
+import { selectPairCandidates } from './pairWatchlists/selection';
+import {
+  PairWatchlistError,
+  type PairWatchlistResult,
+  type PairWatchlistsOptions,
+} from './pairWatchlists/types';
+export { PairWatchlistError } from './pairWatchlists/types';
+export type {
+  ItemSource,
+  PairWatchlistCandidate,
+  PairWatchlistCounts,
+  PairWatchlistItem,
+  PairWatchlistProgress,
+  PairWatchlistResult,
+  PairWatchlistsOptions,
+} from './pairWatchlists/types';
 
 function watchlistErrorMessage(username: string, err: unknown): string {
   if (err instanceof LetterboxdScrapeError) {
@@ -187,40 +79,19 @@ export async function pairWatchlists(
     );
   }
 
-  // 1. Scrape both watchlists in parallel. With per-proxy throttle, requests
-  //    to different proxies actually run concurrently.
-  onProgress?.({
-    stage: 'watchlists',
-    message: `Fetching @${cleanA} and @${cleanB}'s watchlists…`,
-  });
-  const progress = { a: { done: 0, total: 0 }, b: { done: 0, total: 0 } };
-  const emitWatchlistProgress = () => {
-    const done = progress.a.done + progress.b.done;
-    const total = (progress.a.total || 0) + (progress.b.total || 0);
-    onProgress?.({
-      stage: 'watchlists',
-      message: total
-        ? `Fetching watchlists… page ${done}/${total}`
-        : `Fetching watchlists… ${done} pages so far`,
-      pageLoaded: done,
-      pageTotal: total,
-    });
-  };
+  reportWatchlistStart(onProgress, cleanA, cleanB);
+  const { reportUserA, reportUserB } = createWatchlistProgressReporter(onProgress);
   let listA: string[];
   let listB: string[];
   try {
     [listA, listB] = await Promise.all([
       scrapeWatchlist(cleanA, maxWatchlistPages, (p) => {
-        progress.a.done = p.page;
-        progress.a.total = p.total;
-        emitWatchlistProgress();
+        reportUserA(p);
       }).catch((err) => {
         throw new PairWatchlistError(watchlistErrorMessage(cleanA, err), err);
       }),
       scrapeWatchlist(cleanB, maxWatchlistPages, (p) => {
-        progress.b.done = p.page;
-        progress.b.total = p.total;
-        emitWatchlistProgress();
+        reportUserB(p);
       }).catch((err) => {
         throw new PairWatchlistError(watchlistErrorMessage(cleanB, err), err);
       }),
@@ -243,94 +114,30 @@ export async function pairWatchlists(
     );
   }
 
-  // 2. Intersection + near-misses (instant — no network needed).
-  const setA = new Set(listA);
-  const setB = new Set(listB);
-  const overlap = listA.filter((slug) => setB.has(slug));
-
-  const onlyA = listA.filter((slug) => !setB.has(slug));
-  const onlyB = listB.filter((slug) => !setA.has(slug));
-
-  // Interleave near-misses from both lists evenly.
-  const nearMisses: { slug: string; source: ItemSource }[] = [];
-  const halfCap = Math.ceil(maxNearMisses / 2);
-  const cappedA = onlyA.slice(0, halfCap);
-  const cappedB = onlyB.slice(0, halfCap);
-  for (let i = 0; i < Math.max(cappedA.length, cappedB.length); i++) {
-    if (i < cappedA.length) nearMisses.push({ slug: cappedA[i], source: 'userA' });
-    if (i < cappedB.length) nearMisses.push({ slug: cappedB[i], source: 'userB' });
-    if (nearMisses.length >= maxNearMisses) break;
-  }
-
-  const overlapToEnrich = overlap.slice(0, maxOverlap);
-  const allToEnrich = [
-    ...overlapToEnrich.map((slug) => ({ slug, source: 'both' as ItemSource })),
-    ...nearMisses,
-  ];
-
-  const counts: PairWatchlistResult['counts'] = {
-    watchlistA: listA.length,
-    watchlistB: listB.length,
-    overlap: overlap.length,
-    filtered: overlapToEnrich.length + nearMisses.length,
-    enriched: 0,
-  };
-
-  // Build stubs from list-page metadata and emit immediately.
-  // This lets the UI show a full grid of films with posters + titles
-  // before any detail pages have loaded.
-  const stubs = allToEnrich.map(({ slug, source }) => buildStub(slug, source));
+  const { candidates, counts } = selectPairCandidates(
+    listA,
+    listB,
+    maxOverlap,
+    maxNearMisses,
+  );
+  const stubs = candidates.map(({ slug, source }) => buildStubItem(slug, source));
   onStubs?.(stubs, counts);
+  reportIntersection(onProgress, counts.overlap);
 
-  onProgress?.({
-    stage: 'intersection',
-    message: `Found ${overlap.length} shared film${overlap.length === 1 ? '' : 's'} — loading details…`,
-  });
-
-  if (allToEnrich.length === 0) {
-    onProgress?.({ stage: 'done', message: 'Done!' });
+  if (candidates.length === 0) {
+    reportDone(onProgress);
     return { items: [], userA: cleanA, userB: cleanB, counts };
   }
 
-  // 3. Enrich each film with detail page data, streaming items to the caller.
-  const total = allToEnrich.length;
-  let loaded = 0;
-  onProgress?.({
-    stage: 'details',
-    message: `Loading ${total} film${total === 1 ? '' : 's'}…`,
-    detailsLoaded: 0,
-    detailsTotal: total,
-  });
-
-  const details = await runWithConcurrency(allToEnrich, detailConcurrency, async ({ slug, source }) => {
-    try {
-      const d = await scrapeFilm(slug);
-      loaded += 1;
-      const item = toItem(d, source);
-      onItem?.(item);
-      onProgress?.({
-        stage: 'details',
-        message: `Loading films… ${loaded}/${total}`,
-        detailsLoaded: loaded,
-        detailsTotal: total,
-      });
-      return item;
-    } catch {
-      loaded += 1;
-      onProgress?.({
-        stage: 'details',
-        message: `Loading films… ${loaded}/${total}`,
-        detailsLoaded: loaded,
-        detailsTotal: total,
-      });
-      return null;
-    }
-  });
-
-  const items = details.filter((d): d is PairWatchlistItem => d !== null);
+  const items = await enrichPairCandidates(
+    candidates,
+    detailConcurrency,
+    onItem,
+    onProgress,
+  );
   counts.enriched = items.length;
 
-  onProgress?.({ stage: 'done', message: 'Done!' });
+  reportDone(onProgress);
 
   return { items, userA: cleanA, userB: cleanB, counts };
 }

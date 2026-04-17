@@ -244,12 +244,21 @@ export function getDetectedCountry(): string {
     ?? 'us';
 }
 
-/** Build a JustWatch search URL for the detected country. */
-export function buildJustWatchSearchUrl(title: string, year?: number): string {
-  const country = getDetectedCountry();
+/** Build a JustWatch search URL for a specific country code. */
+export function buildJustWatchSearchUrlForCountry(
+  title: string,
+  year: number | undefined,
+  countryCode: string,
+): string {
+  const country = JUSTWATCH_COUNTRIES.has(countryCode) ? countryCode : 'us';
   const searchPath = JUSTWATCH_SEARCH_PATHS[country] ?? 'search';
   const query = [title, year ? String(year) : '']
     .filter(Boolean)
     .join(' ');
   return `https://www.justwatch.com/${country}/${searchPath}?q=${encodeURIComponent(query)}`;
+}
+
+/** Build a JustWatch search URL for the detected country. */
+export function buildJustWatchSearchUrl(title: string, year?: number): string {
+  return buildJustWatchSearchUrlForCountry(title, year, getDetectedCountry());
 }

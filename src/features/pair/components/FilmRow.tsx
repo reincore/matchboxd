@@ -1,32 +1,25 @@
 import { memo } from 'react';
 import { Poster } from '../../../components/Poster';
-import type { PairWatchlistItem, ItemSource } from '../../../services/pairWatchlists';
-import { buildJustWatchSearchUrl } from '../../../services/countryDetection';
-import { cn } from '../../../utils/cn';
+import { Pill } from '../../../components/ui/Pill';
+import { SurfaceCard } from '../../../components/ui/SurfaceCard';
+import type { ItemSource, PairWatchlistItem } from '../../../services/pairWatchlists';
+import { buildJustWatchSearchUrlForCountry } from '../../../services/countryDetection';
 import { formatCount } from '../filters';
-import { CountryPicker } from './CountryPicker';
 
 function SourceBadge({ source, userA, userB }: { source: ItemSource; userA: string; userB: string }) {
   if (source === 'both') return null;
   const label = source === 'userA' ? `@${userA}` : `@${userB}`;
-  const tone =
-    source === 'userA'
-      ? 'border-accent/30 bg-accent/10 text-accent-soft'
-      : 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200';
   return (
-    <span className={cn(
-      'inline-flex items-center rounded-md border px-2 py-0.5 xl:px-2.5 xl:py-1 text-[10px] xl:text-[11px] font-medium',
-      tone,
-    )}>
+    <Pill tone={source === 'userA' ? 'accent' : 'info'} className="font-medium">
       {label} only
-    </span>
+    </Pill>
   );
 }
 
 function RatingPill({ rating, count }: { rating: number; count?: number }) {
   const stars = rating.toFixed(2);
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 xl:px-2.5 xl:py-1 rounded-md bg-accent/10 border border-accent/30 text-[11px] xl:text-[12px] font-medium text-accent-soft">
+    <Pill tone="accent" className="font-medium">
       <span aria-hidden>★</span>
       {stars}
       {count && count > 0 && (
@@ -34,23 +27,12 @@ function RatingPill({ rating, count }: { rating: number; count?: number }) {
           · {formatCount(count)}
         </span>
       )}
-    </span>
+    </Pill>
   );
 }
 
 function MetaPill({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center px-2 py-0.5 xl:px-2.5 xl:py-1 rounded-md border text-[11px] xl:text-[12px]',
-        muted
-          ? 'border-ink-700 bg-ink-900/40 text-ink-400'
-          : 'border-ink-700 bg-ink-900/60 text-ink-200',
-      )}
-    >
-      {children}
-    </span>
-  );
+  return <Pill tone={muted ? 'muted' : 'neutral'}>{children}</Pill>;
 }
 
 function ArrowIcon() {
@@ -71,17 +53,16 @@ export interface FilmRowProps {
   item: PairWatchlistItem;
   userA: string;
   userB: string;
-  jwCountry: string;
-  onCountryChange: (code: string | null) => void;
+  country: string;
 }
 
 export const FilmRow = memo(function FilmRow({
-  item, userA, userB, jwCountry, onCountryChange,
+  item, userA, userB, country,
 }: FilmRowProps) {
-  const jwUrl = buildJustWatchSearchUrl(item.title, item.year);
+  const jwUrl = buildJustWatchSearchUrlForCountry(item.title, item.year, country);
 
   return (
-    <div className="surface-card flex gap-3 xl:gap-4 p-3 xl:p-4">
+    <SurfaceCard padding="none" className="flex gap-3 p-3 xl:gap-4 xl:p-4">
       <a
         href={item.letterboxdUrl}
         target="_blank"
@@ -140,9 +121,9 @@ export const FilmRow = memo(function FilmRow({
             Search JustWatch
             <ArrowIcon />
           </a>
-          <CountryPicker country={jwCountry} onChange={onCountryChange} />
+          <Pill tone="muted">Region {country.toUpperCase()}</Pill>
         </div>
       </div>
-    </div>
+    </SurfaceCard>
   );
 });

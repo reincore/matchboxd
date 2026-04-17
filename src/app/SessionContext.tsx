@@ -1,50 +1,48 @@
 import {
   createContext,
   useEffect,
-  useRef,
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
-import type { SavedSession, SessionStep } from '../types';
-import type { PairWatchlistItem, PairWatchlistResult } from '../services/pairWatchlists';
+import type { SessionStep } from '../types';
+import type {
+  PairWatchlistCounts,
+  PairWatchlistItem,
+  PairWatchlistResult,
+} from '../services/pairWatchlists';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface SessionState {
   step: SessionStep;
   userA: string;
   userB: string;
-  historicalSessions: SavedSession[];
   pairResult: PairWatchlistResult | null;
-  /** Items streamed in during enrichment (stubs → enriched progressively). */
   streamingItems: PairWatchlistItem[];
-  /** True while enrichment is still running. */
   isEnriching: boolean;
-  /** Counts from the intersection phase, available before enrichment. */
-  pairCounts: PairWatchlistResult['counts'] | null;
+  pairCounts: PairWatchlistCounts | null;
 }
 
 interface SessionContextValue extends SessionState {
-  beginPairingRun: () => number;
-  setStep: (s: SessionStep) => void;
-  setUsernames: (a: string, b: string) => void;
-  setPairResult: (r: PairWatchlistResult | null) => void;
-  /** Set initial stubs from list-page metadata (titles + posters). */
-  setStreamingStubs: (runId: number, stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => void;
-  /** Replace a stub with its enriched version. */
-  updateStreamingItem: (runId: number, item: PairWatchlistItem) => void;
-  /** Mark enrichment as finished and consolidate into pairResult. */
-  finalizeEnrichment: (runId: number, result: PairWatchlistResult) => void;
-  saveSession: (session: SavedSession) => void;
+  setStep: (step: SessionStep) => void;
+  setUsernames: (userA: string, userB: string) => void;
+  startPairingRun: () => number;
+  applyPairingStubs: (
+    runId: number,
+    stubs: PairWatchlistItem[],
+    counts: PairWatchlistCounts,
+  ) => boolean;
+  applyPairingItem: (runId: number, item: PairWatchlistItem) => void;
+  completePairingRun: (runId: number, result: PairWatchlistResult) => void;
   reset: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 const STORAGE_KEY = 'matchboxd:session:v2';
-const HISTORY_KEY = 'matchboxd:history:v1';
 
 interface PersistedSession {
   userA: string;
@@ -63,11 +61,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     STORAGE_KEY,
     defaultPersisted,
   );
-  const [history, setHistory] = useLocalStorage<SavedSession[]>(HISTORY_KEY, []);
   const [pairResult, setPairResult] = useState<PairWatchlistResult | null>(null);
   const [streamingItems, setStreamingItems] = useState<PairWatchlistItem[]>([]);
   const [isEnriching, setIsEnriching] = useState(false);
-  const [pairCounts, setPairCounts] = useState<PairWatchlistResult['counts'] | null>(null);
+  const [pairCounts, setPairCounts] = useState<PairWatchlistCounts | null>(null);
   const pairingRunIdRef = useRef(0);
   const hydratedRef = useRef(false);
   const pendingItemsRef = useRef<PairWatchlistItem[]>([]);
@@ -87,14 +84,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [persisted.step, setPersisted]);
 
-  const beginPairingRun = useCallback(() => {
-    const runId = Date.now();
-    pairingRunIdRef.current = runId;
+  const clearPairingState = useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = undefined;
+    }
+    pendingItemsRef.current = [];
     setPairResult(null);
     setStreamingItems([]);
     setPairCounts(null);
     setIsEnriching(false);
-    return runId;
   }, []);
 
   const setStep = useCallback(
@@ -106,12 +105,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [setPersisted],
   );
 
-  const setStreamingStubs = useCallback(
-    (runId: number, stubs: PairWatchlistItem[], counts: PairWatchlistResult['counts']) => {
-      if (runId !== pairingRunIdRef.current) return;
+  const startPairingRun = useCallback(() => {
+    const runId = Date.now();
+    pairingRunIdRef.current = runId;
+    clearPairingState();
+    return runId;
+  }, [clearPairingState]);
+
+  const applyPairingStubs = useCallback(
+    (runId: number, stubs: PairWatchlistItem[], counts: PairWatchlistCounts) => {
+      if (runId !== pairingRunIdRef.current) return false;
       setStreamingItems(stubs);
       setPairCounts(counts);
       setIsEnriching(true);
+      return true;
     },
     [],
   );
@@ -131,7 +138,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updateStreamingItem = useCallback(
+  const applyPairingItem = useCallback(
     (runId: number, item: PairWatchlistItem) => {
       if (runId !== pairingRunIdRef.current) return;
       pendingItemsRef.current.push(item);
@@ -145,10 +152,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [flushPendingItems],
   );
 
-  const finalizeEnrichment = useCallback(
+  const completePairingRun = useCallback(
     (runId: number, result: PairWatchlistResult) => {
       if (runId !== pairingRunIdRef.current) return;
-      // Flush any pending batched items before finalizing
       if (flushTimerRef.current) {
         clearTimeout(flushTimerRef.current);
         flushTimerRef.current = undefined;
@@ -156,29 +162,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       pendingItemsRef.current = [];
       setPairResult(result);
       setIsEnriching(false);
-      // Keep streamingItems in sync with final result
       setStreamingItems(result.items);
       setPairCounts(result.counts);
     },
     [],
   );
 
-  const saveSession = useCallback(
-    (session: SavedSession) => {
-      setHistory((h) => [session, ...h].slice(0, 20));
-    },
-    [setHistory],
-  );
-
   const reset = useCallback(() => {
     clearPersisted();
     setPersisted({ ...defaultPersisted });
-    setPairResult(null);
-    setStreamingItems([]);
-    setIsEnriching(false);
-    setPairCounts(null);
+    clearPairingState();
     pairingRunIdRef.current = 0;
-  }, [clearPersisted, setPersisted]);
+  }, [clearPairingState, clearPersisted, setPersisted]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
@@ -187,15 +182,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       streamingItems,
       isEnriching,
       pairCounts,
-      historicalSessions: history,
-      beginPairingRun,
       setStep,
       setUsernames,
-      setPairResult,
-      setStreamingStubs,
-      updateStreamingItem,
-      finalizeEnrichment,
-      saveSession,
+      startPairingRun,
+      applyPairingStubs,
+      applyPairingItem,
+      completePairingRun,
       reset,
     }),
     [
@@ -204,14 +196,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       streamingItems,
       isEnriching,
       pairCounts,
-      history,
-      beginPairingRun,
       setStep,
       setUsernames,
-      setStreamingStubs,
-      updateStreamingItem,
-      finalizeEnrichment,
-      saveSession,
+      startPairingRun,
+      applyPairingStubs,
+      applyPairingItem,
+      completePairingRun,
       reset,
     ],
   );

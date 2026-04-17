@@ -20,6 +20,7 @@
       linear-gradient(180deg, #08090c 0%, #0c0e13 100%);
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
+    scrollbar-gutter: stable both-edges;
     touch-action: manipulation;
   }
   button {
@@ -34,7 +35,10 @@
 
 @layer components {
   .surface-card {
-    @apply bg-ink-900/80 border border-ink-700/60 backdrop-blur-sm rounded-2xl;
+    @apply rounded-2xl border border-ink-700/60 bg-ink-900/80 shadow-card backdrop-blur-sm;
+  }
+  .surface-field {
+    @apply border border-ink-700/70 bg-ink-900/70 backdrop-blur-sm;
   }
   .chip {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border;
