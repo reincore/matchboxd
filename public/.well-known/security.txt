@@ -1,0 +1,6 @@
+Contact: https://github.com/reincore/matchboxd/security/advisories/new
+Policy: https://github.com/reincore/matchboxd/security/policy
+Canonical: https://matchboxd.com/.well-known/security.txt
+Preferred-Languages: en
+Expires: 2027-05-20T00:00:00Z
+
