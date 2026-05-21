@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { PairWatchlistItem } from './pairWatchlists';
 import {
+  DEFAULT_PAIR_RESULTS_FILTERS,
   filterPairItems,
   sortPairItems,
+  type PairResultsFilters,
 } from '../features/pair/filters';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -21,31 +23,32 @@ function makeItem(overrides: Partial<PairWatchlistItem> = {}): PairWatchlistItem
   };
 }
 
+function filterSlugs(
+  items: PairWatchlistItem[],
+  filters: Partial<PairResultsFilters>,
+) {
+  return filterPairItems(items, {
+    ...DEFAULT_PAIR_RESULTS_FILTERS,
+    ...filters,
+  }).map((item) => item.slug);
+}
+
 describe('genre filtering', () => {
   it('romcom requires BOTH romance AND comedy genres', () => {
     const romcom = makeItem({ genres: ['Romance', 'Comedy'] });
     const pureComedy = makeItem({ slug: 'comedy', genres: ['Comedy'] });
     const pureRomance = makeItem({ slug: 'romance', genres: ['Romance'] });
 
-    const result = filterPairItems([romcom, pureComedy, pureRomance], {
+    expect(filterSlugs([romcom, pureComedy, pureRomance], {
       mood: 'romcom',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    });
-    expect(result.map((i) => i.slug)).toEqual(['test-film']);
+    })).toEqual(['test-film']);
   });
 
   it('horror filter matches case-insensitively', () => {
     const item = makeItem({ genres: ['horror'] });
-    expect(filterPairItems([item], {
+    expect(filterSlugs([item], {
       mood: 'horror',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    })).toHaveLength(1);
+    })).toEqual(['test-film']);
   });
 
   it('scifi matches "Science Fiction" and "Sci-Fi"', () => {
@@ -53,14 +56,10 @@ describe('genre filtering', () => {
     const scifi = makeItem({ slug: 'scifi', genres: ['Sci-Fi'] });
     const action = makeItem({ slug: 'action', genres: ['Action'] });
 
-    const result = filterPairItems([sf, scifi, action], {
+    const result = filterSlugs([sf, scifi, action], {
       mood: 'scifi',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
     });
-    expect(result.map((i) => i.slug)).toEqual(['sf', 'scifi']);
+    expect(result).toEqual(['sf', 'scifi']);
   });
 
   it('recent filter uses CURRENT_YEAR - 5 threshold', () => {
@@ -68,14 +67,10 @@ describe('genre filtering', () => {
     const old = makeItem({ slug: 'old', year: 2000 });
     const boundary = makeItem({ slug: 'boundary', year: RECENT_THRESHOLD });
 
-    const result = filterPairItems([recent, old, boundary], {
+    const result = filterSlugs([recent, old, boundary], {
       mood: 'recent',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
     });
-    expect(result.map((i) => i.slug)).toEqual(['new', 'boundary']);
+    expect(result).toEqual(['new', 'boundary']);
   });
 
   it('"all" mood returns everything', () => {
@@ -83,13 +78,9 @@ describe('genre filtering', () => {
       makeItem({ slug: 'a', genres: ['Horror'] }),
       makeItem({ slug: 'b', genres: ['Comedy'] }),
     ];
-    expect(filterPairItems(items, {
+    expect(filterSlugs(items, {
       mood: 'all',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    })).toHaveLength(2);
+    })).toEqual(['a', 'b']);
   });
 });
 
@@ -98,38 +89,36 @@ describe('unenriched stub passthrough', () => {
     const stub = makeItem({ slug: 'stub', enriched: false, genres: [] });
     const enriched = makeItem({ slug: 'horror', enriched: true, genres: ['Horror'] });
 
-    const result = filterPairItems([stub, enriched], {
+    const result = filterSlugs([stub, enriched], {
       mood: 'horror',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
     });
-    expect(result.map((i) => i.slug)).toEqual(['stub', 'horror']);
+    expect(result).toEqual(['stub', 'horror']);
   });
 
   it('does NOT keep enriched items with empty genres', () => {
     const enrichedEmpty = makeItem({ slug: 'empty', enriched: true, genres: [] });
-    const result = filterPairItems([enrichedEmpty], {
+    const result = filterSlugs([enrichedEmpty], {
       mood: 'horror',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
     });
     expect(result).toHaveLength(0);
   });
 
   it('applies "recent" filter normally to stubs (year is available on stubs)', () => {
     const oldStub = makeItem({ slug: 'old', enriched: false, genres: [], year: 2000 });
-    const result = filterPairItems([oldStub], {
+    const result = filterSlugs([oldStub], {
       mood: 'recent',
-      sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
     });
     expect(result).toHaveLength(0);
+  });
+
+  it('still applies source filters before allowing unknown-genre stubs through', () => {
+    const aStub = makeItem({ slug: 'a-stub', source: 'userA', enriched: false, genres: [] });
+    const bStub = makeItem({ slug: 'b-stub', source: 'userB', enriched: false, genres: [] });
+
+    expect(filterSlugs([aStub, bStub], {
+      mood: 'horror',
+      sourceFilter: 'userA',
+    })).toEqual(['a-stub']);
   });
 });
 
@@ -139,14 +128,10 @@ describe('quick filters', () => {
     const long = makeItem({ slug: 'long', runtime: 120 });
     const noRuntime = makeItem({ slug: 'no-runtime' });
 
-    const result = filterPairItems([short, long, noRuntime], {
-      mood: 'all',
-      sourceFilter: 'all',
+    const result = filterSlugs([short, long, noRuntime], {
       underOneHundred: true,
-      highRatedOnly: false,
-      sort: 'rating',
     });
-    expect(result.map((i) => i.slug)).toEqual(['short']);
+    expect(result).toEqual(['short']);
   });
 
   it('highRatedOnly excludes films under 4.0', () => {
@@ -154,14 +139,55 @@ describe('quick filters', () => {
     const low = makeItem({ slug: 'low', lbRating: 3.5 });
     const noRating = makeItem({ slug: 'none' });
 
-    const result = filterPairItems([high, low, noRating], {
-      mood: 'all',
-      sourceFilter: 'all',
-      underOneHundred: false,
+    const result = filterSlugs([high, low, noRating], {
       highRatedOnly: true,
-      sort: 'rating',
     });
-    expect(result.map((i) => i.slug)).toEqual(['high']);
+    expect(result).toEqual(['high']);
+  });
+
+  it('combines source, mood, runtime, and rating as an intersection', () => {
+    const match = makeItem({
+      slug: 'match',
+      source: 'userA',
+      genres: ['Comedy'],
+      runtime: 92,
+      lbRating: 4.1,
+    });
+    const wrongSource = makeItem({
+      slug: 'wrong-source',
+      source: 'userB',
+      genres: ['Comedy'],
+      runtime: 92,
+      lbRating: 4.1,
+    });
+    const wrongMood = makeItem({
+      slug: 'wrong-mood',
+      source: 'userA',
+      genres: ['Drama'],
+      runtime: 92,
+      lbRating: 4.1,
+    });
+    const tooLong = makeItem({
+      slug: 'too-long',
+      source: 'userA',
+      genres: ['Comedy'],
+      runtime: 101,
+      lbRating: 4.1,
+    });
+    const tooLow = makeItem({
+      slug: 'too-low',
+      source: 'userA',
+      genres: ['Comedy'],
+      runtime: 92,
+      lbRating: 3.9,
+    });
+
+    expect(filterSlugs([match, wrongSource, wrongMood, tooLong, tooLow], {
+      mood: 'comedy',
+      sourceFilter: 'userA',
+      underOneHundred: true,
+      highRatedOnly: true,
+    })).toEqual(['match']);
   });
 });
 
@@ -171,34 +197,18 @@ describe('source filter', () => {
     const a = makeItem({ slug: 'a', source: 'userA' });
     const b = makeItem({ slug: 'b', source: 'userB' });
 
-    expect(filterPairItems([both, a, b], {
-      mood: 'all',
+    expect(filterSlugs([both, a, b], {
       sourceFilter: 'both',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    }).map((i) => i.slug)).toEqual(['both']);
-    expect(filterPairItems([both, a, b], {
-      mood: 'all',
+    })).toEqual(['both']);
+    expect(filterSlugs([both, a, b], {
       sourceFilter: 'userA',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    }).map((i) => i.slug)).toEqual(['a']);
-    expect(filterPairItems([both, a, b], {
-      mood: 'all',
+    })).toEqual(['a']);
+    expect(filterSlugs([both, a, b], {
       sourceFilter: 'userB',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    }).map((i) => i.slug)).toEqual(['b']);
-    expect(filterPairItems([both, a, b], {
-      mood: 'all',
+    })).toEqual(['b']);
+    expect(filterSlugs([both, a, b], {
       sourceFilter: 'all',
-      underOneHundred: false,
-      highRatedOnly: false,
-      sort: 'rating',
-    })).toHaveLength(3);
+    })).toEqual(['both', 'a', 'b']);
   });
 });
 
@@ -236,5 +246,13 @@ describe('sorting', () => {
     ];
     const sorted = sortPairItems(mixed, 'rating');
     expect(sorted[0].slug).toBe('rated');
+  });
+
+  it('does not mutate the original items array', () => {
+    const original = [...items];
+
+    sortPairItems(items, 'rating');
+
+    expect(items).toEqual(original);
   });
 });

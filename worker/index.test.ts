@@ -57,4 +57,49 @@ describe('Matchboxd worker allowlists', () => {
     expect(response.headers.get('X-Client-Country')).toBe('TR');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it('proxies allowed Letterboxd requests with diagnostic headers', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('<html>Letterboxd</html>', {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    }));
+
+    const request = new Request(
+      'https://matchboxd-proxy.reincore.workers.dev/?url=https%3A%2F%2Fletterboxd.com%2Ffilm%2Fpast-lives%2F',
+      {
+        headers: {
+          Origin: 'https://matchboxd.com',
+          'cf-ipcountry': 'TR',
+        },
+      },
+    );
+
+    const response = await worker.fetch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('<html>Letterboxd</html>');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://matchboxd.com');
+    expect(response.headers.get('X-Client-Country')).toBe('TR');
+    expect(response.headers.get('X-Matchboxd-Proxy')).toBe('cloudflare');
+    expect(response.headers.get('X-Upstream-Status')).toBe('200');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://letterboxd.com/film/past-lives/',
+      expect.objectContaining({
+        redirect: 'follow',
+        headers: expect.objectContaining({
+          Accept: 'text/html,application/xhtml+xml,*/*',
+        }),
+      }),
+    );
+  });
+
+  it('serves health checks without touching upstream', async () => {
+    const response = await worker.fetch(
+      new Request('https://matchboxd-proxy.reincore.workers.dev/healthz'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, proxy: 'cloudflare' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
