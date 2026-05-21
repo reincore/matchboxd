@@ -76,9 +76,12 @@ export function filterPairItems(
       return false;
     }
 
-    if (filters.sourceFilter === 'both' && item.source !== 'both') return false;
-    if (filters.sourceFilter === 'userA' && item.source === 'userB') return false;
-    if (filters.sourceFilter === 'userB' && item.source === 'userA') return false;
+    if (
+      filters.sourceFilter !== 'all' &&
+      item.source !== filters.sourceFilter
+    ) {
+      return false;
+    }
 
     if (
       filters.mood !== 'all' &&

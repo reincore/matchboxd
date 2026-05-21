@@ -61,7 +61,11 @@ interface RenderedTree {
   cleanup: () => void;
 }
 
-function makeItem(slug: string, title: string) {
+function makeItem(
+  slug: string,
+  title: string,
+  source: 'both' | 'userA' | 'userB' = 'both',
+) {
   return {
     slug,
     title,
@@ -74,7 +78,7 @@ function makeItem(slug: string, title: string) {
     lbRating: 4.3,
     lbRatingCount: 2400,
     letterboxdUrl: `https://letterboxd.com/film/${slug}/`,
-    source: 'both' as const,
+    source,
     enriched: true,
   };
 }
@@ -369,6 +373,61 @@ describe('Matchboxd app flow', () => {
     expect(justWatchLinks).toHaveLength(2);
     justWatchLinks.forEach((anchor) => {
       expect(anchor.href).toContain('https://www.justwatch.com/tr/arama?q=');
+    });
+  });
+
+  it('filters source dropdown choices to exact result groups', async () => {
+    const result = makeResult('alice', 'bob', [
+      makeItem('shared-film', 'Shared Film', 'both'),
+      makeItem('alice-film', 'Alice Film', 'userA'),
+      makeItem('bob-film', 'Bob Film', 'userB'),
+    ]);
+
+    pairWatchlistsMock.mockImplementation(async (_userA, _userB, options) => {
+      options?.onStubs?.(result.items.map(makeStub), result.counts);
+      return result;
+    });
+
+    seedSession('alice', 'bob');
+    currentRender = await renderApp();
+    const sourceRender = currentRender;
+    await submitPrefilledLanding(sourceRender.container);
+
+    await waitFor(() => {
+      expect(currentRender?.container.textContent).toContain('Shared Film');
+      expect(currentRender?.container.textContent).toContain('Alice Film');
+      expect(currentRender?.container.textContent).toContain('Bob Film');
+    });
+
+    const getSourceSelect = () => sourceRender.container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Filter by source"]',
+    );
+    expect(getSourceSelect()).not.toBeNull();
+
+    await act(async () => {
+      const sourceSelect = getSourceSelect();
+      expect(sourceSelect).not.toBeNull();
+      sourceSelect!.value = 'userA';
+      Simulate.change(sourceSelect!);
+    });
+
+    await waitFor(() => {
+      expect(currentRender?.container.textContent).not.toContain('Shared Film');
+      expect(currentRender?.container.textContent).toContain('Alice Film');
+      expect(currentRender?.container.textContent).not.toContain('Bob Film');
+    });
+
+    await act(async () => {
+      const sourceSelect = getSourceSelect();
+      expect(sourceSelect).not.toBeNull();
+      sourceSelect!.value = 'both';
+      Simulate.change(sourceSelect!);
+    });
+
+    await waitFor(() => {
+      expect(currentRender?.container.textContent).toContain('Shared Film');
+      expect(currentRender?.container.textContent).not.toContain('Alice Film');
+      expect(currentRender?.container.textContent).not.toContain('Bob Film');
     });
   });
 });

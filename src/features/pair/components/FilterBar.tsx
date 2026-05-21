@@ -45,8 +45,8 @@ export function FilterBar({
   const sourceOptions: SelectOption[] = [
     { value: 'all', label: 'All films' },
     { value: 'both', label: 'Both' },
-    { value: 'userA', label: `@${userA}` },
-    { value: 'userB', label: `@${userB}` },
+    { value: 'userA', label: `@${userA} only` },
+    { value: 'userB', label: `@${userB} only` },
   ];
   const sortOptions: SelectOption[] = SORT_OPTIONS.map((option) => ({
     value: option.id,

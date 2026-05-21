@@ -184,14 +184,14 @@ describe('source filter', () => {
       underOneHundred: false,
       highRatedOnly: false,
       sort: 'rating',
-    }).map((i) => i.slug)).toEqual(['both', 'a']);
+    }).map((i) => i.slug)).toEqual(['a']);
     expect(filterPairItems([both, a, b], {
       mood: 'all',
       sourceFilter: 'userB',
       underOneHundred: false,
       highRatedOnly: false,
       sort: 'rating',
-    }).map((i) => i.slug)).toEqual(['both', 'b']);
+    }).map((i) => i.slug)).toEqual(['b']);
     expect(filterPairItems([both, a, b], {
       mood: 'all',
       sourceFilter: 'all',
